@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="utf-8" />
+    <title>訓練安全檢核表系統</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- 設定區 -->
+    <script>
+        // 填入你的 GAS 網址 (exec結尾)
+        const GAS_URL = "你的_GAS_部署網址";
+        const LIFF_ID = ""; // 如果有 LIFF ID 可填入
+    </script>
+
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@5.0.7/dist/signature_pad.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        :root { --primary-color: #003366; --bg-color: #f4f7f9; }
+        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-color); margin: 0; padding: 15px; color: #333; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        
+        h2 { text-align: center; color: var(--primary-color); margin-bottom: 5px; }
+        .sub-title { text-align: center; margin-bottom: 20px; font-weight: bold; }
+
+        /* 基本資訊區 */
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px; background: #eef2f5; padding: 15px; border-radius: 5px; }
+        .info-item label { font-weight: bold; display: block; font-size: 0.9rem; }
+        .info-item input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+
+        /* 表格區 */
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.9rem; }
+        table, th, td { border: 1px solid #aaa; }
+        th { background: #f0f0f0; padding: 10px; }
+        td { padding: 8px; text-align: center; }
+        td.align-left { text-align: left; }
+        .radio-group { display: flex; justify-content: space-around; }
+        input[type="text"].full-width { width: 95%; border: none; border-bottom: 1px solid #ddd; }
+
+        /* 簽名區 */
+        .signature-section { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        .sig-wrapper { border: 2px dashed var(--primary-color); border-radius: 5px; background: #fff; position: relative; }
+        .sig-label { position: absolute; top: 5px; left: 5px; font-size: 0.8rem; color: #888; pointer-events: none; }
+        canvas { width: 100%; height: 150px; cursor: crosshair; }
+        .sig-tools { text-align: right; padding: 5px; }
+
+        /* 按鈕 */
+        .btn-group { margin-top: 30px; display: flex; gap: 10px; }
+        .btn { flex: 1; padding: 15px; border: none; border-radius: 5px; font-weight: bold; font-size: 1.1rem; cursor: pointer; transition: 0.3s; }
+        .btn-clear { background: #6c757d; color: white; }
+        .btn-submit { background: var(--primary-color); color: white; }
+        .btn:hover { opacity: 0.8; }
+
+        #loading { display: none; text-align: center; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); padding-top:20%; z-index:1000; }
+        
+        @media (max-width: 600px) {
+            .signature-section { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="formContent">
+    <h2>臺北市政府消防局</h2>
+    <div class="sub-title">訓練安全檢核表 (通用)</div>
+
+    <!-- 頂部資訊 -->
+    <div class="info-grid">
+        <div class="info-item">
+            <label>訓練日期與時間</label>
+            <input type="datetime-local" id="trainingTime">
+        </div>
+        <div class="info-item">
+            <label>地點</label>
+            <input type="text" id="location" placeholder="請輸入訓練地點">
+        </div>
+    </div>
+
+    <!-- 檢核表主體 -->
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th width="5%">項次</th>
+                    <th width="45%">安全檢查注意事項</th>
+                    <th width="20%">符合情形</th>
+                    <th>待改進或檢修事項</th>
+                </tr>
+            </thead>
+            <tbody id="checklistBody">
+                <!-- 由 JS 動態產生 -->
+            </tbody>
+        </table>
+    </div>
+
+    <div style="margin-bottom: 10px;">
+        <label><strong>備註：</strong></label><br>
+        <textarea id="remarks" style="width:100%; height:60px; margin-top:5px;"></textarea>
+    </div>
+
+    <!-- 簽名區 -->
+    <div class="signature-section">
+        <div>
+            <div class="sig-wrapper">
+                <span class="sig-label">教官簽章區</span>
+                <canvas id="canvasInstructor"></canvas>
+            </div>
+            <div class="sig-tools">
+                <button type="button" onclick="clearSig(sigInstructor)">清除</button>
+            </div>
+        </div>
+        <div>
+            <div class="sig-wrapper">
+                <span class="sig-label">當日安全官簽章區</span>
+                <canvas id="canvasSafetyOfficer"></canvas>
+            </div>
+            <div class="sig-tools">
+                <button type="button" onclick="clearSig(sigSafetyOfficer)">清除</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="btn-group">
+        <button class="btn btn-submit" id="submitBtn">確認並產生 PDF 送出</button>
+    </div>
+</div>
+
+<div id="loading">
+    <i class="fas fa-spinner fa-spin fa-3x"></i>
+    <p>正在生成檢核表 PDF 並存檔...</p>
+</div>
+
+<script>
+    const checklistItems = [
+        "於訓練前是否有對學員進行危害告知?",
+        "是否依照消防署或局頒教材內容安排進行上課。",
+        "是否已熟知署頒消防安全救災手冊內容之相關規定，並依規定要求進行操作？",
+        "現場操作人員有無身體不適情形？現場醫療器材有無準備？",
+        "評估天候狀況是否適合操作?",
+        "是否選用適當操作場域?",
+        "個人裝備及使用器材是否適當?",
+        "訓練所需裝備器材外觀功能點檢是否正常?",
+        "確認操作人員個人裝備及身體狀況",
+        "教官是否進行示範講解",
+        "是否有擬定安全計畫(備援方案)？"
+    ];
+
+    let sigInstructor, sigSafetyOfficer;
+
+    window.onload = function() {
+        renderTable();
+        initSignatures();
+        // 設定預設時間
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('trainingTime').value = now.toISOString().slice(0,16);
+    };
+
+    function renderTable() {
+        const tbody = document.getElementById('checklistBody');
+        checklistItems.forEach((item, index) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${index + 1}</td>
+                <td class="align-left">${item}</td>
+                <td>
+                    <div class="radio-group">
+                        <label><input type="radio" name="item_${index}" value="是">是</label>
+                        <label><input type="radio" name="item_${index}" value="否">否</label>
+                        <label><input type="radio" name="item_${index}" value="N/A">/A</label>
+                    </div>
+                </td>
+                <td><input type="text" class="full-width" id="improve_${index}"></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function initSignatures() {
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        
+        const canvas1 = document.getElementById("canvasInstructor");
+        canvas1.width = canvas1.offsetWidth * ratio;
+        canvas1.height = canvas1.offsetHeight * ratio;
+        sigInstructor = new SignaturePad(canvas1, { backgroundColor: 'rgb(255, 255, 255)' });
+
+        const canvas2 = document.getElementById("canvasSafetyOfficer");
+        canvas2.width = canvas2.offsetWidth * ratio;
+        canvas2.height = canvas2.offsetHeight * ratio;
+        sigSafetyOfficer = new SignaturePad(canvas2, { backgroundColor: 'rgb(255, 255, 255)' });
+    }
+
+    function clearSig(pad) { pad.clear(); }
+
+    async function makePDF() {
+        // 建立一個用於 PDF 的影子 DOM，確保格式像紙本
+        const printDiv = document.createElement('div');
+        printDiv.style.cssText = "position:fixed; left:-9999px; width:800px; padding:40px; background:#fff; color:#000;";
+        
+        const timeVal = document.getElementById('trainingTime').value.replace('T', ' ');
+        const locVal = document.getElementById('location').value;
+
+        let tableRows = "";
+        checklistItems.forEach((item, i) => {
+            const radioVal = document.querySelector(`input[name="item_${i}"]:checked`)?.value || "";
+            const improveVal = document.getElementById(`improve_${i}`).value;
+            tableRows += `
+                <tr>
+                    <td style="border:1px solid #000; text-align:center; padding:8px;">${i+1}</td>
+                    <td style="border:1px solid #000; padding:8px;">${item}</td>
+                    <td style="border:1px solid #000; text-align:center; padding:8px;">${radioVal}</td>
+                    <td style="border:1px solid #000; padding:8px;">${improveVal}</td>
+                </tr>`;
+        });
+
+        printDiv.innerHTML = `
+            <h1 style="text-align:center; margin-bottom:5px;">臺北市政府消防局</h1>
+            <h2 style="text-align:center; margin-top:0;">訓練安全檢核表 (通用)</h2>
+            <p><strong>訓練日期：</strong> ${timeVal} &nbsp;&nbsp;&nbsp; <strong>地點：</strong> ${locVal}</p>
+            <table style="width:100%; border-collapse:collapse; border:1px solid #000;">
+                <thead>
+                    <tr style="background:#eee;">
+                        <th style="border:1px solid #000; width:8%;">項次</th>
+                        <th style="border:1px solid #000; width:50%;">安全檢查注意事項</th>
+                        <th style="border:1px solid #000; width:15%;">符合</th>
+                        <th style="border:1px solid #000;">待改進事項</th>
+                    </tr>
+                </thead>
+                <tbody>${tableRows}</tbody>
+            </table>
+            <p><strong>備註：</strong> ${document.getElementById('remarks').value}</p>
+            <div style="display:flex; justify-content:space-between; margin-top:30px;">
+                <div style="width:45%;">
+                    <p>教官簽章：</p>
+                    <img src="${sigInstructor.toDataURL()}" style="width:200px; border-bottom:1px solid #000;">
+                </div>
+                <div style="width:45%;">
+                    <p>當日安全官簽章：</p>
+                    <img src="${sigSafetyOfficer.toDataURL()}" style="width:200px; border-bottom:1px solid #000;">
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(printDiv);
+        const canvas = await html2canvas(printDiv, { scale: 2 });
+        document.body.removeChild(printDiv);
+        
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgWidth = 210;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, imgWidth, imgHeight);
+        
+        return new Promise(r => {
+            const reader = new FileReader();
+            reader.onloadend = () => r(reader.result.split(',')[1]);
+            reader.readAsDataURL(pdf.output('blob'));
+        });
+    }
+
+    document.getElementById("submitBtn").onclick = async function() {
+        if(sigInstructor.isEmpty() || sigSafetyOfficer.isEmpty()) {
+            alert("教官與安全官均須簽名！");
+            return;
+        }
+
+        document.getElementById('loading').style.display = 'block';
+
+        try {
+            const base64 = await makePDF();
+            const timeStr = document.getElementById('trainingTime').value;
+            
+            const payload = {
+                time: timeStr,
+                location: document.getElementById('location').value,
+                fileName: `訓練安全檢核表_${timeStr.slice(0,10)}.pdf`,
+                file: base64
+            };
+
+            await fetch(GAS_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain" },
+                body: JSON.stringify(payload)
+            });
+
+            alert("送出成功！");
+            location.reload();
+        } catch(e) {
+            alert("錯誤：" + e.message);
+            document.getElementById('loading').style.display = 'none';
+        }
+    };
+</script>
+
+</body>
+</html>
