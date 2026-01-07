@@ -165,7 +165,7 @@
 </div>
 
 <script>
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbzVBtIbXxH-spzyPyF5vvsCFS_L75b_CFRBXK5JSQQx7AwHnZRjQFZEBOtXlRFNBt2UjQ/exec"; 
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbz8o5TnHZazo-_vs73Zy8qDaSXCPGrNqPP689flqX0frTqiC8Amm_kmVIts_SfZR2zECg/exec"; 
 
     const checklists = {
         general: { title: "臺北市政府消防局訓練安全檢核表(通用)", items: ["於訓練前是否有對學員進行危害告知?", "是否依照消防署或局頒教材內容安排進行上課。", "是否已熟知署頒消防安全救災手冊內容之相關規定，並依規定要求進行操作？", "現場操作人員有無身體不適情形？現場醫療器材有無準備？", "評估天候狀況是否適合操作?", "是否選用適當操作場域?", "個人裝備及使用器材是否適當?", "訓練所需裝備器材外觀功能點檢是否正常?", "確認操作人員個人裝備及身體狀況", "教官是否進行示範講解", "是否有擬定安全計畫(備援方案)？"] },
@@ -266,13 +266,21 @@
     function closePreview() { document.getElementById('previewModal').style.display = 'none'; }
 
     async function finalSubmit() {
+        const email = document.getElementById('targetEmail').value;
+        if (!email) return alert("請先輸入收件 Email");
         if (!p1 || p1.isEmpty() || p2.isEmpty()) return alert("請完成教官與安全官簽名");
-        if (!confirm("確定送出歸檔？")) return;
+        if (!confirm("確定要將 PDF 存入雲端並寄信嗎？")) return;
         
         document.getElementById('loader').style.display = 'flex';
-        fillTemplate();
+        fillTemplate(); // 填寫影子樣板
         
-        const canvas = await html2canvas(document.getElementById('pdfTemplate'), { scale: 3, backgroundColor: "#ffffff" });
+        // 生成高清截圖
+        const canvas = await html2canvas(document.getElementById('pdfTemplate'), { 
+            scale: 3, 
+            backgroundColor: "#ffffff",
+            useCORS: true 
+        });
+        
         const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 210, (canvas.height * 210) / canvas.width);
         
@@ -281,20 +289,26 @@
         reader.onloadend = async () => {
             const base64 = reader.result.split(',')[1];
             try {
-                await fetch(GAS_URL, {
+                const response = await fetch(GAS_URL, {
                     method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain' },
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({
-                        email: document.getElementById('targetEmail').value,
+                        email: email,
                         fileData: base64,
                         fileName: `${document.getElementById('pdfTitle').innerText}_${document.getElementById('trainName').value}.pdf`
                     })
                 });
-                alert("歸檔成功！檔案已存雲端並寄送通知。");
-                location.reload();
+                
+                const resultText = await response.text();
+                if (resultText.includes("Success")) {
+                    alert("✅ 歸檔成功！檔案已存入雲端並寄送 Email。");
+                    location.reload();
+                } else {
+                    alert("❌ 歸檔失敗：" + resultText);
+                    document.getElementById('loader').style.display = 'none';
+                }
             } catch(e) {
-                alert("送出失敗。");
+                alert("❌ 連線異常，請檢查網路或 GAS 部署設定。");
                 document.getElementById('loader').style.display = 'none';
             }
         };
