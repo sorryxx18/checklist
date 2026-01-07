@@ -266,17 +266,45 @@ document.getElementById('pdfTimeDisplay').innerText = `中華民國 ${y-1911} �
         return pdf.output('blob');
     }
 
+    // 解決手機預覽空白的修正版
     async function previewPDF() {
         if(p1.isEmpty() || p2.isEmpty()) return alert("請先完成教官與安全官簽名再預覽。");
         document.getElementById('loader').style.display = 'flex';
-        const blob = await generatePDFBlob();
-        const url = URL.createObjectURL(blob);
-        document.getElementById('previewFrame').src = url;
-        document.getElementById('loader').style.display = 'none';
-        document.getElementById('previewModal').style.display = 'flex';
+
+        try {
+            const blob = await generatePDFBlob();
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+            if (isMobile) {
+                // 手機端：使用 DataURL 強制開啟
+                const reader = new FileReader();
+                reader.onloadend = function() {
+                    document.getElementById('loader').style.display = 'none';
+                    const dataUrl = reader.result;
+                    // 先嘗試新視窗，被擋住就直接跳轉
+                    const newWin = window.open(dataUrl, '_blank');
+                    if (!newWin || newWin.closed || typeof newWin.closed == 'undefined') {
+                        location.href = dataUrl;
+                    }
+                };
+                reader.readAsDataURL(blob);
+            } else {
+                // 電腦端：維持 iframe 預覽
+                const url = URL.createObjectURL(blob);
+                document.getElementById('previewFrame').src = url;
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('previewModal').style.display = 'flex';
+            }
+        } catch (e) {
+            alert("預覽失敗：" + e.message);
+            document.getElementById('loader').style.display = 'none';
+        }
     }
 
-    function closeModal() { document.getElementById('previewModal').style.display = 'none'; }
+    function closeModal() { 
+        document.getElementById('previewModal').style.display = 'none'; 
+        document.getElementById('previewFrame').src = ""; 
+    }
 
     async function finalSubmit() {
         const email = document.getElementById('targetEmail').value;
