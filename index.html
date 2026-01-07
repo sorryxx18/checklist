@@ -328,24 +328,28 @@
         
         const reader = new FileReader();
         reader.readAsDataURL(pdf.output('blob'));
-        reader.onloadend = async () => {
+       reader.onloadend = async () => {
             const base64 = reader.result.split(',')[1];
             try {
-                const response = await fetch(GAS_URL, {
+                // 使用最保險的傳輸方式
+                await fetch(GAS_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    mode: 'no-cors', // 💡 解決跨網域攔截
+                    headers: { 'Content-Type': 'text/plain' }, 
                     body: JSON.stringify({
                         email: email,
                         fileData: base64,
                         fileName: `${document.getElementById('pdfTitle').innerText}_${document.getElementById('trainName').value}.pdf`
                     })
                 });
-                const res = await response.text();
-                if (res.includes("Success")) {
-                    alert("✅ 歸檔成功！檔案已存入雲端。");
-                    location.reload();
-                } else { alert("❌ 歸檔失敗：" + res); document.getElementById('loader').style.display = 'none'; }
-            } catch(e) { alert("❌ 連線失敗。"); document.getElementById('loader').style.display = 'none'; }
+                
+                // 因為 mode: 'no-cors' 無法取得回傳結果，我們直接假設成功並提示用戶
+                alert("✅ 歸檔程序已啟動！\n請稍候 1-2 分鐘至雲端硬碟或 Email 查看。");
+                location.reload();
+            } catch(e) {
+                alert("❌ 連線失敗，請檢查網路或 GAS 部署網址是否正確。");
+                document.getElementById('loader').style.display = 'none';
+            }
         };
     }
 </script>
