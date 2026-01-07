@@ -5,145 +5,158 @@
     <title>消防訓練安全檢核系統</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
+    <!-- 必要 Library -->
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@5.0.7/dist/signature_pad.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
     <style>
-        :root { --primary-color: #c0392b; --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
-        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg-gradient); margin: 0; padding: 20px; min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; overscroll-behavior: none; }
+        :root { --primary-red: #c0392b; --gold-border: #d4af37; --dark-blue: #2c3e50; }
+        
+        body { font-family: "Microsoft JhengHei", sans-serif; background: #2c3e50; margin: 0; padding: 20px; min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; }
 
-        .step-container { width: 100%; max-width: 500px; background: white; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); overflow: hidden; }
-        .header { background: #fff; padding: 20px; border-bottom: 3px solid var(--primary-color); text-align: center; }
-        .header h2 { margin: 0; font-size: 1.3rem; color: #2c3e50; }
-        .content-padding { padding: 20px; }
-        .step { display: none; } .step.active { display: block; animation: slideIn 0.4s ease-out; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* 紅金質感容器 */
+        .app-container { 
+            width: 100%; max-width: 500px; background: white; border-radius: 15px; 
+            border: 3px solid var(--gold-border); box-shadow: 0 15px 35px rgba(0,0,0,0.4); overflow: hidden; 
+        }
 
-        .form-group { margin-bottom: 18px; }
-        label { display: block; font-weight: bold; margin-bottom: 6px; font-size: 0.9rem; color: #555; }
-        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #dfe6e9; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        .header { background: var(--primary-red); padding: 25px 15px; border-bottom: 4px solid var(--gold-border); text-align: center; color: white; }
+        .header h2 { margin: 0; font-size: 1.4rem; letter-spacing: 2px; text-shadow: 1px 1px 3px rgba(0,0,0,0.5); }
 
-        .check-card { background: #f8f9fa; border: 1px solid #edf2f7; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
-        .check-text { font-size: 1rem; margin-bottom: 12px; color: #2d3436; text-align: left; line-height: 1.5; font-weight: 500; }
-        .option-group { display: flex; gap: 8px; }
-        .opt-btn { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 8px; background: white; cursor: pointer; text-align: center; font-weight: bold; }
-        .opt-btn.selected { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+        .content { padding: 20px; }
+        .step { display: none; } .step.active { display: block; animation: slideIn 0.4s ease; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
-        .sig-box { border: 2px dashed #b2bec3; border-radius: 10px; height: 180px; margin-top: 10px; background: #fff; touch-action: none; position: relative; }
+        /* 控制項樣式 */
+        label { display: block; font-weight: bold; margin-top: 15px; font-size: 0.95rem; color: #444; border-left: 4px solid var(--primary-red); padding-left: 8px; }
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-top: 6px; font-size: 16px; box-sizing: border-box; background: #fafafa; }
+        input:focus { border-color: var(--gold-border); outline: none; box-shadow: 0 0 8px rgba(212,175,55,0.2); }
+
+        /* 卡片式檢核項 */
+        .card { background: #fff; border: 1px solid #eee; border-left: 5px solid var(--gold-border); border-radius: 10px; padding: 15px; margin-bottom: 12px; box-shadow: 0 3px 6px rgba(0,0,0,0.05); }
+        .card-text { font-size: 1rem; margin-bottom: 12px; color: #333; line-height: 1.5; font-weight: 500; }
+        .opt-group { display: flex; gap: 8px; }
+        .opt-btn { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 8px; background: #fff; cursor: pointer; text-align: center; font-weight: bold; color: #666; transition: 0.2s; }
+        .opt-btn.selected { background: var(--primary-red); color: white; border-color: var(--primary-red); box-shadow: 0 4px 8px rgba(192,57,43,0.3); }
+
+        /* 簽名區 */
+        .sig-box { border: 2px dashed #b2bec3; border-radius: 10px; height: 180px; margin-top: 10px; background: #fff; touch-action: none; }
         canvas { width: 100%; height: 100%; }
 
-        .btn-group { display: flex; gap: 12px; margin-top: 25px; padding-bottom: 10px; }
-        .btn { flex: 1; padding: 15px; border: none; border-radius: 10px; font-weight: bold; font-size: 1.1rem; cursor: pointer; }
-        .btn-next { background: var(--primary-color); color: white; }
-        .btn-prev { background: #95a5a6; color: white; }
-        .btn-preview { background: #2980b9; color: white; }
+        /* 按鈕系統 */
+        .btn-group { display: flex; gap: 10px; margin-top: 30px; padding-bottom: 20px; }
+        .btn { flex: 1; padding: 16px; border: none; border-radius: 10px; font-weight: bold; font-size: 1.1rem; cursor: pointer; transition: 0.3s; color: white; }
+        .btn-next { background: var(--primary-red); border-bottom: 4px solid #962d22; }
+        .btn-prev { background: #7f8c8d; }
+        .btn-preview { background: #2980b9; }
 
-        /* === PDF 仿真影子樣板 === */
+        /* === PDF 影子樣板 (解決跑版) === */
         #pdfTemplate { width: 800px; padding: 50px; background: white; position: absolute; left: -9999px; color: black; box-sizing: border-box; }
-        .pdf-main-table { width: 100%; border-collapse: collapse; border: 2px solid black; }
+        .pdf-main-table { width: 100%; border-collapse: collapse; border: 2.5px solid black; }
         .pdf-main-table th, .pdf-main-table td { border: 1px solid black; padding: 10px; font-size: 15px; text-align: center; vertical-align: middle; }
         .pdf-left { text-align: left !important; padding-left: 10px; line-height: 1.6; }
-        .v-mark { font-family: Arial; font-weight: bold; font-size: 22px; }
+        .v-mark { font-family: Arial; font-weight: bold; font-size: 24px; }
 
-        /* 預覽視窗 */
+        /* 預覽 Modal */
         #previewModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10000; flex-direction: column; }
+        .modal-header { background: var(--primary-red); color: white; padding: 15px; display: flex; justify-content: space-between; border-bottom: 2px solid var(--gold-border); }
         #previewImageContainer { flex: 1; overflow: auto; padding: 15px; display: flex; justify-content: center; background: #333; }
-        #previewImg { max-width: 100%; background: white; }
+        #previewImg { max-width: 100%; background: white; box-shadow: 0 0 30px black; }
 
         #loader { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; }
-        @media (max-width: 600px) { body { padding: 0; } .step-container { border-radius: 0; min-height: 100vh; } }
+        @media (max-width: 600px) { body { padding: 0; } .app-container { border-radius: 0; min-height: 100vh; border: none; } }
     </style>
 </head>
 <body>
 
 <div id="loader">
-    <i class="fas fa-circle-notch fa-spin fa-3x" style="color:var(--primary-color)"></i>
-    <p style="margin-top:20px; font-weight:bold;">檔案處理中，請稍候...</p>
+    <i class="fas fa-circle-notch fa-spin fa-4x" style="color:var(--primary-red)"></i>
+    <p style="margin-top:20px; font-weight:bold; color: var(--dark-blue);">數位歸檔處理中，請稍候...</p>
 </div>
 
-<div class="step-container">
-    <div class="header"><h2>消防訓練安全檢核系統</h2></div>
-    <div class="content-padding">
-        <!-- Step 1 -->
+<div class="app-container">
+    <div class="header">
+        <h2>消防訓練安全檢核系統</h2>
+    </div>
+
+    <div class="content">
+        <!-- Step 1: 基本資料 -->
         <div class="step active" id="step1">
-            <div class="form-group">
-                <label>1. 檢核表種類</label>
-                <select id="courseType" onchange="updateItems()">
-                    <option value="general">通用課程檢核表</option>
-                    <option value="rope">繩索救援訓練檢核表</option>
-                    <option value="rescue">救助破壞操作檢核表</option>
-                    <option value="car">車禍救助訓練檢核表</option>
-                    <option value="indoor">入室搜救訓練檢核表</option>
-                    <option value="fire">實火燃燒訓練檢核表</option>
-                    <option value="diving">潛水救援訓練檢核表</option>
-                    <option value="physical">體能訓練安全檢核表</option>
-                    <option value="scba">空氣呼吸器訓練場檢核表</option>
-                    <option value="water">水域訓練安全檢核表</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>2. 訓練名稱/期別</label>
-                <input type="text" id="trainName" placeholder="例如：救助隊第1期複訓">
-            </div>
-            <div class="form-group">
-                <label>3. 訓練日期時間</label>
-                <input type="datetime-local" id="trainTime">
-            </div>
-            <div class="form-group">
-                <label>4. 訓練地點</label>
-                <input type="text" id="trainLoc" value="內湖訓練中心">
-            </div>
-            <div class="form-group">
-                <label>5. 收件 Email</label>
-                <input type="email" id="targetEmail" placeholder="收件人電子信箱">
-            </div>
-            <div class="btn-group"><button class="btn btn-next" onclick="goStep(2)">開始檢核 <i class="fas fa-arrow-right"></i></button></div>
+            <label>1. 檢核表種類</label>
+            <select id="courseType" onchange="updateItems()">
+                <option value="scba">空氣呼吸器訓練(SCBA)</option>
+                <option value="rope">繩索救援訓練</option>
+                <option value="rescue">救助破壞操作</option>
+                <option value="car">車禍救助訓練</option>
+                <option value="indoor">入室搜救訓練</option>
+                <option value="fire">實火燃燒訓練</option>
+                <option value="diving">潛水救援訓練</option>
+                <option value="physical">體能訓練</option>
+                <option value="water">水域訓練安全</option>
+                <option value="general">通用課程</option>
+            </select>
+            <label>2. 訓練名稱/期別</label>
+            <input type="text" id="trainName" value="空氣呼吸器操作訓練第1期">
+            <label>3. 訓練日期時間</label>
+            <input type="datetime-local" id="trainTime">
+            <label>4. 訓練地點</label>
+            <input type="text" id="trainLoc" value="內湖訓練中心">
+            <label>5. 收件 Email</label>
+            <input type="email" id="targetEmail" placeholder="歸檔後將寄送至此信箱">
+            
+            <div class="btn-group"><button class="btn btn-next" onclick="goStep(2)">進入檢核項目 <i class="fas fa-chevron-right"></i></button></div>
         </div>
 
-        <!-- Step 2 -->
+        <!-- Step 2: 檢核項目 -->
         <div class="step" id="step2">
             <div id="cardList"></div>
-            <div class="form-group"><label>備註事項</label><textarea id="memo" rows="2"></textarea></div>
+            <label>備註事項</label>
+            <textarea id="memo" rows="2" placeholder="如有異常請備註"></textarea>
             <div class="btn-group">
                 <button class="btn btn-prev" onclick="goStep(1)">上一步</button>
-                <button class="btn btn-next" onclick="goStep(3)">去簽名 <i class="fas fa-arrow-right"></i></button>
+                <button class="btn btn-next" onclick="goStep(3)">下一步：簽名確認</button>
             </div>
         </div>
 
-        <!-- Step 3 -->
+        <!-- Step 3: 簽名 -->
         <div class="step" id="step3">
             <label>教官簽章</label>
             <div class="sig-box"><canvas id="c1"></canvas></div>
-            <button onclick="p1.clear()" style="margin:8px 0; border:none; background:none; color:#c0392b; font-weight:bold;">[ 清除 ]</button>
+            <button onclick="p1.clear()" style="margin:5px 0; border:none; background:none; color:var(--primary-red); font-weight:bold;">[ 清除重簽 ]</button>
+            
             <label>當日安全官簽章</label>
             <div class="sig-box"><canvas id="c2"></canvas></div>
-            <button onclick="p2.clear()" style="margin:8px 0; border:none; background:none; color:#c0392b; font-weight:bold;">[ 清除 ]</button>
+            <button onclick="p2.clear()" style="margin:5px 0; border:none; background:none; color:var(--primary-red); font-weight:bold;">[ 清除重簽 ]</button>
+            
             <div class="btn-group">
                 <button class="btn btn-prev" onclick="goStep(2)">回上步</button>
                 <button class="btn btn-preview" onclick="showPreview()">預覽</button>
-                <button class="btn btn-next" style="background:#27ae60;" onclick="finalSubmit()">歸檔送出</button>
+                <button class="btn btn-next" style="background:#27ae60; border-bottom:4px solid #1e8449;" onclick="finalSubmit()">確認歸檔送出</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- 預覽 Modal -->
+<!-- 預覽視窗 -->
 <div id="previewModal">
-    <div class="modal-header"><b>PDF 成品預覽</b><button onclick="closePreview()" style="color:white; border:none; background:none; font-size:24px;">&times;</button></div>
+    <div class="modal-header">
+        <b><i class="fas fa-file-pdf"></i> 正式 PDF 樣式確認</b>
+        <button onclick="closePreview()" style="color:white; border:none; background:none; font-size:24px;">&times;</button>
+    </div>
     <div id="previewImageContainer"><img id="previewImg" src=""></div>
 </div>
 
-<!-- PDF 影子樣板 -->
+<!-- 仿真 PDF 樣板 -->
 <div id="pdfTemplate">
     <table class="pdf-main-table">
         <thead>
             <tr><th colspan="7" style="border:none; font-size:28px; padding: 20px 0 5px;" id="pdfTitle"></th></tr>
-            <tr><td colspan="7" style="border:none; text-align:left; font-size:16px; font-weight:bold; padding-bottom:10px;">名稱/期別：<span id="pdfCourseName"></span></td></tr>
+            <tr><td colspan="7" style="border:none; text-align:left; font-size:18px; font-weight:bold; padding-bottom:10px;">訓練名稱/期別：<span id="pdfCourseName"></span></td></tr>
             <tr>
-                <td colspan="4" style="border:none; text-align:left; font-weight:bold;" id="pdfTimeDisplay"></td>
-                <td colspan="3" style="border:none; text-align:right; font-weight:bold;" id="pdfLocDisplay"></td>
+                <td colspan="4" style="border:none; text-align:left; font-weight:bold; font-size:16px;" id="pdfTimeDisplay"></td>
+                <td colspan="3" style="border:none; text-align:right; font-weight:bold; font-size:16px;" id="pdfLocDisplay"></td>
             </tr>
             <tr>
                 <th rowspan="2" width="6%">項次</th><th rowspan="2" width="48%">安全檢查注意事項</th>
@@ -164,18 +177,18 @@
 </div>
 
 <script>
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbyrpJD8kLXFXxvGA-hi4AaPFWaEJ77MnAvFyl8Hhy7JwhRSyhfmPZ-e8vpMcLlIZMIk-Q/exec"; 
+    const GAS_URL = "您的_GAS_網址"; 
     const checklists = {
-        general: { title: "臺北市政府消防局訓練安全檢核表(通用)", items: ["於訓練前是否有對學員進行危害告知?", "是否依照消防署或局頒教材內容安排進行上課。", "是否已熟知署頒消防安全救災手冊內容之相關規定...", "現場操作人員有無身體不適情形？現場醫療器材有無準備？", "評估天候狀況是否適合操作?", "是否選用適當操作場域?", "個人裝備及使用器材是否適當?", "訓練所需裝備器材外觀功能點檢是否正常?", "確認操作人員個人裝備及身體狀況", "教官是否進行示範講解", "是否有擬定安全計畫(備援方案)？"] },
-        rope: { title: "臺北市政府消防局繩索救援訓練安全檢核表", items: ["危害告知", "教材安排", "手冊相關規定", "人員不適評估", "師資共同授課(含安全官)", "瞭解繩索器材特性", "器材完善檢查", "視覺死角檢查", "穩定固定點", "雙繩多重確保", "邊緣保護", "防護裝備", "教官示範", "安全計畫", "器材回收"] },
-        rescue: { title: "臺北市政府消防局救助破壞操作安全檢核表", items: ["危害告知", "教材內容", "手冊規定", "人員狀況", "場地選用", "防護裝備", "熟悉器材操作", "器材外觀點檢", "備妥滅火器", "水線防護", "尖銳物處理", "清理現場"] },
-        car: { title: "臺北市政府消防局車禍救助訓練檢核表", items: ["危害告知", "教材內容", "手冊規定", "人員狀況", "人員編組", "場地選用", "防護裝備", "熟悉器材操作", "器材外觀點檢", "車體穩固", "備妥滅火器", "尖銳物處理", "清理現場"] },
-        indoor: { title: "臺北市政府消防局入室搜救訓練檢核表", items: ["危害告知", "教材內容", "手冊規定", "人員不適", "管制編組", "檢查空呼器", "場地選用", "防護裝備", "安全計畫", "身心狀況", "測溫檢查", "水線部署", "防護水線", "布線固定"] },
-        fire: { title: "臺北市政府消防局實火燃燒訓練檢核表", items: ["危害告知", "教材內容", "不適評估", "教官安全官", "步驟瞭解", "器材點檢", "水箱車供水", "充水待命", "通風評估", "規範點火", "示範說明", "防護裝備", "安全計畫", "棧板進氣孔", "身心輪替", "餘燼清除"] },
-        diving: { title: "臺北市政府消防局潛水救援訓練檢核表", items: ["危害告知", "教材內容", "手冊規定", "人員狀況", "天候水情", "場勘評估", "熱身運動", "器材特性", "潛水裝備", "示範目標", "人員編組", "安全計畫", "監看確保", "檢查清潔"] },
-        physical: { title: "臺北市政府消防局體能訓練安全檢核表", items: ["危害告知", "師資安排", "示範說明", "天候評估", "場地選用", "身體評估", "操作服裝", "折返點", "補水機制", "休息機制", "再次評估"] },
-        scba: { title: "空氣呼吸器訓練場檢核表", items: ["危害告知", "教材安排", "不適評估", "場地分區", "步驟瞭解", "器材點檢", "防護裝備", "腳部保護", "管制編組", "壓力報警", "安全計畫", "身心輪替", "報警處置", "中止機制", "鐵網穩定"] },
-        water: { title: "臺北市政府消防局水域訓練安全檢核表", items: ["危害告知", "教材內容", "手冊規定", "不適評估", "天候水情", "裝備特性", "水域裝備", "教官示範", "任務分工", "上下游確保", "熱身運動", "安全計畫", "檢查清潔"] }
+        scba: { title: "臺北市政府消防局空氣呼吸器訓練檢核表", items: ["危害告知", "教材安排", "不適評估", "場地分區", "步驟瞭解", "器材點檢", "防護裝備", "腳部保護", "管制編組(2人1組)", "壓力報警檢查", "安全計畫", "身心輪替", "報警處置", "中止機制", "鐵網穩定"] },
+        rope: { title: "臺北市政府消防局繩索救援訓練檢核表", items: ["危害告知", "教材安排", "手冊規定", "人員不適評估", "師資共同授課(含安全官)", "瞭解繩索器材特性", "使用前檢查繩索器材完善性", "確保無視覺死角", "選擇穩固/多固定點均力架設", "採取雙繩以上多重確保", "進行邊緣保護措施", "落實穿著防護裝備", "教官是否有進行示範", "擬定安全計畫", "檢查回收器材"] },
+        rescue: { title: "臺北市政府消防局救助破壞操作檢核表", items: ["危害告知", "教材安排", "手冊規定", "人員狀況", "場地選用", "防護裝備", "破壞器材熟悉", "器材點檢", "滅火器備妥", "水線防護", "尖銳物處理", "清理現場"] },
+        car: { title: "臺北市政府消防局車禍救助訓練檢核表", items: ["危害告知", "教材安排", "手冊規定", "人員狀況", "人員編組", "場地選用", "防護裝備", "破壞器材操作熟悉", "功能點檢", "車體穩固", "滅火器備妥", "尖銳物保護", "清理現場"] },
+        indoor: { title: "臺北市政府消防局入室搜救訓練檢核表", items: ["危害告知", "教材安排", "手冊規定", "人員不適", "管制編組(至少2人1組)", "檢查空呼器壓力與殘壓", "場地選用", "防護裝備", "安全計畫", "身心狀況", "測溫檢查", "水線部署", "防護水線", "布線固定"] },
+        fire: { title: "臺北市政府消防局實火燃燒訓練檢核表", items: ["危害告知", "教材內容", "不適評估", "教官安全官討論", "步驟瞭解", "器材點檢", "水箱車專責供水", "充水待命", "通風評估", "規範點火(嚴禁燃油)", "示範說明", "防護裝備", "安全計畫", "棧板進氣孔確認", "身心狀況輪替", "餘燼清除避免復燃"] },
+        diving: { title: "臺北市政府消防局潛水救援訓練檢核表", items: ["危害告知", "教材安排", "手冊規定", "人員狀況", "天候水情", "場勘評估", "熱身運動", "器材特性", "潛水裝備", "示範目標", "人員編組(至少2人1組)", "安全計畫(備援)", "監看確保人員", "器材檢查清潔"] },
+        physical: { title: "臺北市政府消防局體能訓練安全檢核表", items: ["危害告知", "師資安排", "教官示範", "天候評估", "場地選用", "身體評估", "操作服裝", "折返點(500m)", "補水機制", "休息機制", "再次評估"] },
+        water: { title: "臺北市政府消防局水域訓練安全檢核表", items: ["危害告知", "教材內容", "手冊規定", "不適評估", "天候水情", "裝備特性", "水域裝備", "教官示範", "任務分工", "上下游確保", "熱身運動", "安全計畫", "器材檢查清潔"] },
+        general: { title: "臺北市政府消防局訓練安全檢核表(通用)", items: ["危害告知", "教材內容安排", "熟知手冊規定", "人員不適評估/醫療器材", "天候狀況評估", "選用適當場域", "裝備器材適當", "外觀功能點檢", "確認個人裝備/身體", "教官示範講解", "安全計畫(備援方案)"] }
     };
 
     let p1, p2;
@@ -193,7 +206,7 @@
         const list = document.getElementById('cardList');
         list.innerHTML = "";
         data.items.forEach((txt, i) => {
-            list.innerHTML += `<div class="check-card"><div class="check-text">${i+1}. ${txt}</div><div class="option-group">
+            list.innerHTML += `<div class="card"><div class="card-text">${i+1}. ${txt}</div><div class="opt-group">
                 <div class="opt-btn selected" id="opt_${i}_是" onclick="selectOpt(${i},'是')">是</div>
                 <div class="opt-btn" id="opt_${i}_否" onclick="selectOpt(${i},'否')">否</div>
                 <div class="opt-btn" id="opt_${i}_不適用" onclick="selectOpt(${i},'不適用')">不適用</div>
@@ -253,7 +266,8 @@
         if (!p1 || p1.isEmpty() || p2.isEmpty()) return alert("簽名後才能預覽成品");
         document.getElementById('loader').style.display = 'flex';
         fillTemplate();
-        const canvas = await html2canvas(document.getElementById('pdfTemplate'), { scale: 2, backgroundColor: "#ffffff" });
+        const el = document.getElementById('pdfTemplate');
+        const canvas = await html2canvas(el, { scale: 2, backgroundColor: "#ffffff", height: el.offsetHeight });
         document.getElementById('previewImg').src = canvas.toDataURL('image/jpeg', 0.9);
         document.getElementById('loader').style.display = 'none';
         document.getElementById('previewModal').style.display = 'flex';
@@ -270,13 +284,13 @@
         
         document.getElementById('loader').style.display = 'flex';
         fillTemplate();
-
         const dateRaw = timeVal.split('T')[0].replace(/-/g, '');
         const timeRaw = timeVal.split('T')[1].replace(/:/g, '');
         const fullFileName = `${dateRaw}_${timeRaw}_${document.getElementById('courseType').value}_${trainName}.pdf`;
 
-        const canvas = await html2canvas(document.getElementById('pdfTemplate'), { scale: 3, backgroundColor: "#ffffff" });
-        const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+        const el = document.getElementById('pdfTemplate');
+        const canvas = await html2canvas(el, { scale: 3, backgroundColor: "#ffffff", height: el.offsetHeight });
+        const pdf = new jspdf.jsPDF('p', 'mm', [210, (canvas.height * 210) / canvas.width]);
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 210, (canvas.height * 210) / canvas.width);
         
         const reader = new FileReader();
@@ -289,7 +303,7 @@
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({ email: email, fileData: base64, fileName: fullFileName, dateStr: dateRaw })
                 });
-                alert("✅ 歸檔成功！檔案已存入 [" + dateRaw + "] 資料夾並寄送 Email。");
+                alert("✅ 歸檔成功！");
                 location.reload();
             } catch(e) { alert("❌ 連線異常。"); document.getElementById('loader').style.display = 'none'; }
         };
