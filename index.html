@@ -140,7 +140,9 @@
 <!-- 仿真 PDF 影子樣板 (Hidden) -->
 <div id="pdfTemplate">
     <h2 id="pdfTitle" style="text-align:center; font-size:26px;"></h2>
-    <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-weight:bold; font-size:16px;">
+<!-- 新增下面這一行 -->
+<div style="font-size:16px; font-weight:bold; margin-bottom:10px;">訓練名稱/期別：<span id="pdfNameDisplay"></span></div>
+<div style="display:flex; justify-content:space-between; margin-bottom:5px; font-weight:bold; font-size:16px;">
         <span id="pdfTimeDisplay"></span>
         <span id="pdfLocDisplay"></span>
     </div>
@@ -241,7 +243,9 @@
 
         // 填充影子樣板
         document.getElementById('pdfTitle').innerText = data.title;
-        document.getElementById('pdfTimeDisplay').innerText = `中華民國 ${y-1911} 年 ${m} 月 ${d} 日`;
+// 新增下面這一行
+document.getElementById('pdfNameDisplay').innerText = document.getElementById('trainName').value;
+document.getElementById('pdfTimeDisplay').innerText = `中華民國 ${y-1911} 年 ${m} 月 ${d} 日`;
         document.getElementById('pdfLocDisplay').innerText = "地點：" + document.getElementById('trainLoc').value;
         document.getElementById('pdfMemo').innerText = "備註：" + document.getElementById('memo').value;
         document.getElementById('img1').src = p1.toDataURL();
