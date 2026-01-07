@@ -44,29 +44,32 @@
         .btn-prev { background: #95a5a6; color: white; }
         .btn-preview { background: #2980b9; color: white; }
 
-        /* === PDF 影子樣板 (仿真紙本格式) === */
+        /* === PDF 仿真樣板 (平常隱藏，預覽時顯示) === */
         #pdfTemplate { width: 800px; padding: 50px; background: white; color: black; position: absolute; left: -9999px; }
         .pdf-table { width: 100%; border-collapse: collapse; border: 1.5px solid black; }
         .pdf-table th, .pdf-table td { border: 1px solid black; padding: 8px; font-size: 14px; text-align: center; vertical-align: middle; }
         .pdf-left { text-align: left !important; padding-left: 10px; line-height: 1.5; }
         .v-mark { font-family: Arial, sans-serif; font-weight: bold; font-size: 20px; }
 
+        /* 預覽模式下的縮放設定 */
+        .preview-mode-active #pdfTemplate { position: relative !important; left: 0 !important; margin: 0 auto; transform-origin: top center; box-shadow: 0 0 10px rgba(0,0,0,0.2); }
+
         /* Loading & Preview Modal */
         #loader { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.95); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; }
         #previewModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; justify-content: center; align-items: center; }
         .modal-body { background: white; width: 95%; height: 95%; border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; }
-        iframe { flex: 1; border: none; }
+        #previewContent { background: #ddd; padding: 10px; flex: 1; overflow: auto; display: flex; justify-content: center; }
     </style>
 </head>
 <body>
 
 <div id="loader">
     <i class="fas fa-spinner fa-spin fa-3x" style="color:var(--primary)"></i>
-    <p style="margin-top:15px; font-weight:bold;">PDF 生成與同步中...</p>
+    <p style="margin-top:15px; font-weight:bold;">檔案處理中...</p>
 </div>
 
 <div class="step-container">
-    <div class="header"><h2 id="uiTitle">訓練安全檢核表</h2></div>
+    <div class="header"><h2 id="uiTitle">訓練安全檢核系統</h2></div>
 
     <!-- Step 1: 基本資料 -->
     <div class="step active" id="step1">
@@ -84,12 +87,12 @@
             <option value="water">水域訓練安全檢核表</option>
         </select>
         <label>2. 訓練名稱/期別</label>
-        <input type="text" id="trainName" placeholder="例如：113年救助隊第1期複訓">
+        <input type="text" id="trainName" placeholder="例如：救助隊複訓">
         <label>3. 訓練日期時間</label>
         <input type="datetime-local" id="trainTime">
         <label>4. 訓練地點</label>
         <input type="text" id="trainLoc" value="內湖訓練中心">
-        <label>5. 收件 Email (供結果寄送)</label>
+        <label>5. 收件 Email</label>
         <input type="email" id="targetEmail" placeholder="收件人電子信箱">
         
         <div class="btn-group">
@@ -97,7 +100,7 @@
         </div>
     </div>
 
-    <!-- Step 2: 檢核項目 (卡片式) -->
+    <!-- Step 2: 項目勾選 -->
     <div class="step" id="step2">
         <div id="cardList"></div>
         <label>備註事項</label>
@@ -108,41 +111,39 @@
         </div>
     </div>
 
-    <!-- Step 3: 雙人簽名 & 送出 -->
+    <!-- Step 3: 簽名確認 -->
     <div class="step" id="step3">
         <label>教官簽章</label>
         <div class="sig-box"><canvas id="c1"></canvas></div>
-        <button onclick="p1.clear()" style="margin:5px 0 15px; background:none; border:1px solid #ccc; padding:5px 10px; border-radius:5px;">重簽</button>
-        
+        <button onclick="p1.clear()" style="margin:5px 0 10px;">重簽</button>
         <label>當日安全官簽章</label>
         <div class="sig-box"><canvas id="c2"></canvas></div>
-        <button onclick="p2.clear()" style="margin:5px 0 15px; background:none; border:1px solid #ccc; padding:5px 10px; border-radius:5px;">重簽</button>
+        <button onclick="p2.clear()" style="margin:5px 0 10px;">重簽</button>
         
         <div class="btn-group">
-            <button class="btn btn-prev" onclick="goStep(2)">回上一步</button>
-            <button class="btn btn-preview" onclick="previewPDF()">預覽 PDF <i class="fas fa-eye"></i></button>
-            <button class="btn btn-next" style="background:#27ae60;" onclick="finalSubmit()">確認送出歸檔 <i class="fas fa-paper-plane"></i></button>
+            <button class="btn btn-prev" onclick="goStep(2)">回上步</button>
+            <button class="btn btn-preview" onclick="previewPDF()">預覽成品 <i class="fas fa-eye"></i></button>
+            <button class="btn btn-next" style="background:#27ae60;" onclick="finalSubmit()">確認送出歸檔</button>
         </div>
     </div>
 </div>
 
-<!-- 預覽視窗 -->
+<!-- 仿真預覽視窗 -->
 <div id="previewModal">
     <div class="modal-body">
         <div style="padding:15px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;">
-            <b style="color:var(--primary)">仿真 PDF 成品預覽</b>
+            <b style="color:var(--primary)">PDF 樣式預覽</b>
             <button onclick="closeModal()" style="border:none; background:none; font-size:24px;">&times;</button>
         </div>
-        <iframe id="previewFrame"></iframe>
+        <div id="previewContent"></div>
     </div>
 </div>
 
 <!-- 仿真 PDF 影子樣板 (Hidden) -->
 <div id="pdfTemplate">
     <h2 id="pdfTitle" style="text-align:center; font-size:26px;"></h2>
-<!-- 新增下面這一行 -->
-<div style="font-size:16px; font-weight:bold; margin-bottom:10px;">訓練名稱/期別：<span id="pdfNameDisplay"></span></div>
-<div style="display:flex; justify-content:space-between; margin-bottom:5px; font-weight:bold; font-size:16px;">
+    <div style="font-size:16px; font-weight:bold; margin-bottom:10px;">訓練名稱/期別：<span id="pdfNameDisplay"></span></div>
+    <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-weight:bold; font-size:16px;">
         <span id="pdfTimeDisplay"></span>
         <span id="pdfLocDisplay"></span>
     </div>
@@ -170,17 +171,17 @@
 </div>
 
 <script>
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbwW_qsuUqROYlNIRZojpYGybSqNSrrh_fponteA72izzjGhScwMpUttcZ3qgyZXbxwwtQ/exec"; // ⚠️ 請更新此處
+    const GAS_URL = "您的_GAS_網址"; 
     const checklists = {
         general: { title: "臺北市政府消防局訓練安全檢核表(通用)", items: ["於訓練前是否有對學員進行危害告知?", "是否依照消防署或局頒教材內容安排進行上課。", "是否已熟知署頒消防安全救災手冊相關規定？", "人員有無不適評估？醫療器材有無準備？", "評估天候狀況是否適合操作?", "是否選用適當操作場域?", "個人裝備及使用器材是否適當?", "訓練所需裝備器材外觀功能點檢是否正常?", "確認操作人員個人裝備及身體狀況", "教官是否進行示範講解", "是否有擬定安全計畫(備援方案)？"] },
         rope: { title: "臺北市政府消防局繩索救援訓練安全檢核表", items: ["危害告知", "教材安排", "手冊相關規定", "人員身體狀況不適評估", "兩位以上師資共同授課(含安全官)", "充分瞭解繩索及器材特性", "使用前檢查繩索及器材完善性", "確保操作現場無視覺死角", "選擇穩固固定點或多固定點均力架設", "繩索架設採取雙繩以上多重確保", "繩索系統進行邊緣保護措施", "落實穿著防護裝備", "教官是否有進行示範", "擬定安全計畫(備援方案)", "使用後檢查繩索及器材狀況"] },
         rescue: { title: "臺北市政府消防局救助破壞操作安全檢核表", items: ["危害告知", "教材內容安排", "熟知安全救災手冊規定", "人員身體不適評估", "選用適當場地(淨空並區分操作教學)", "穿戴適當個人防護裝備", "熟悉破壞器材操作與流程", "檢查所用器材外觀功能", "車禍破劃易生火花時備妥滅火器", "配合實火操作現場水線防護", "尖銳物妥善處理(移除或保護)", "確實清理現場碎玻璃碎片"] },
         car: { title: "臺北市政府消防局車禍救助訓練操作安全檢核表", items: ["危害告知", "教材安排", "熟知手冊規定", "人員不適評估", "實施人員編組與任務分工", "選用適當操作場地", "穿戴適當防護裝備", "熟悉破壞器材操作", "器材功能點檢", "車體穩固後開始操作", "易生火花時備妥滅火器", "尖銳物妥善處理", "清理現場碎片遺留物"] },
         indoor: { title: "臺北市政府消防局入室搜救訓練安全檢核表", items: ["危害告知", "教材安排", "熟知救災手冊規定", "現場人員不適評估", "人員管制編組(至少2人1組)", "檢查空呼器壓力與殘壓警報", "選用適當場地", "穿戴完整個人防護裝備", "擬定安全計畫(備援方案)", "注意身心狀況與輪替機制", "入室布線前測溫動作", "水線部署2人以上為1線", "實火訓練建立防護水線", "梯間布線固定"] },
-        fire: { title: "臺北市政府消防局實火燃燒訓練安全檢核表", items: ["危害告知", "教材安排", "人員不適評估", "安排教官安全官討論流程", "瞭解設備步驟注意事項", "檢查外觀功能正常", "專責人員操作水箱車供水", "點火前部署充水待命水線", "清空區域評估安全通風", "規範區域點火(嚴禁燃油)", "教官示範說明", "防護裝備穿戴", "安全計畫(備援方案)", "棧板放置與進氣孔確認", "注意身心狀況與輪替", "餘燼清除避免復燃"] },
+        fire: { title: "臺北市政府消防局實火燃燒訓練安全檢核表", items: ["危害告知", "教材安排", "人員不適評估", "安排教官安全官討論流程", "瞭解設備步驟注意事項", "檢查外觀功能正常", "專責人員操作水箱車供水", "點火前部署充水待命水線", "清空區域評估安全通風", "規範區域點火(嚴禁燃油)", "教官示範說明", "防護裝備穿戴", "安全計畫(備援方案)", "棧板與進氣孔確認", "注意身心狀況與輪替", "餘燼清除避免復燃"] },
         diving: { title: "臺北市政府消防局潛水救援訓練安全檢核表", items: ["危害告知", "教材安排", "手冊規定", "人員身體不適評估", "天候水情評估(流速深度)", "選擇入水點場勘評估", "入水前熱身運動", "瞭解器材特性", "穿戴完整潛水救生裝備", "教官示範訓練目標", "人員編組(2人1組)", "安全計畫(備援潛水員)", "排定監看確保人員", "器具檢查與清潔"] },
         physical: { title: "臺北市政府消防局體能訓練安全檢核表", items: ["危害告知", "教官安全官安排", "教官示範說明", "天候狀況評估", "選用適當場地", "身體不適評估", "穿著適當服裝", "設定折返點(500m為原則)", "設置補水站機制", "安排休息機制", "訓練後再次評估身體狀況"] },
-        scba: { title: "臺北市中心空氣呼吸器訓練場檢核表", items: ["危害告知", "教材安排", "不適評估", "場地分區", "步驟瞭解", "器材點檢", "防護裝備", "侷限空間保護", "管制編組(2人1組)", "壓力與報警器檢查", "安全計畫", "身心輪替", "報警處置", "中止機制", "鐵網穩定性"] },
+        scba: { title: "空氣呼吸器訓練場檢核表", items: ["危害告知", "教材安排", "不適評估", "場地分區", "步驟瞭解", "器材點檢", "防護裝備", "侷限空間保護", "管制編組(2人1組)", "壓力與報警器檢查", "安全計畫", "身心輪替", "報警處置", "中止機制", "鐵網穩定性"] },
         water: { title: "臺北市政府消防局水域訓練安全檢核表", items: ["危害告知", "教材安排", "救災手冊規定", "身體不適評估", "天候水情評估", "裝備特性瞭解", "完整水域裝備穿戴", "教官示範", "實施人員編組分工", "排定上下游確保人員", "完成熱身運動", "安全計畫", "器具檢查清潔"] }
     };
 
@@ -235,17 +236,16 @@
         });
     }
 
-    async function generatePDFBlob() {
+    // 填充資料到樣板的共用函式
+    function fillTemplate() {
         const type = document.getElementById('courseType').value;
         const data = checklists[type];
         const timeVal = document.getElementById('trainTime').value;
         const [y, m, d] = timeVal.split('T')[0].split('-');
 
-        // 填充影子樣板
         document.getElementById('pdfTitle').innerText = data.title;
-// 新增下面這一行
-document.getElementById('pdfNameDisplay').innerText = document.getElementById('trainName').value;
-document.getElementById('pdfTimeDisplay').innerText = `中華民國 ${y-1911} 年 ${m} 月 ${d} 日`;
+        document.getElementById('pdfNameDisplay').innerText = document.getElementById('trainName').value;
+        document.getElementById('pdfTimeDisplay').innerText = `中華民國 ${y-1911} 年 ${m} 月 ${d} 日`;
         document.getElementById('pdfLocDisplay').innerText = "地點：" + document.getElementById('trainLoc').value;
         document.getElementById('pdfMemo').innerText = "備註：" + document.getElementById('memo').value;
         document.getElementById('img1').src = p1.toDataURL();
@@ -259,78 +259,65 @@ document.getElementById('pdfTimeDisplay').innerText = `中華民國 ${y-1911} �
                 <td class="v-mark">${val==='是'?'V':''}</td><td class="v-mark">${val==='否'?'V':''}</td><td class="v-mark">${val==='不適用'?'V':''}</td>
                 <td></td><td></td></tr>`;
         });
-
-        const canvas = await html2canvas(document.getElementById('pdfTemplate'), { scale: 3 });
-        const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
-        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 210, (canvas.height * 210) / canvas.width);
-        return pdf.output('blob');
     }
 
-    // 解決手機預覽空白的修正版
     async function previewPDF() {
-        if(p1.isEmpty() || p2.isEmpty()) return alert("請先完成教官與安全官簽名再預覽。");
+        if(p1.isEmpty() || p2.isEmpty()) return alert("請先完成簽名再預覽。");
         document.getElementById('loader').style.display = 'flex';
 
-        try {
-            const blob = await generatePDFBlob();
-            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        fillTemplate();
 
-            if (isMobile) {
-                // 手機端：使用 DataURL 強制開啟
-                const reader = new FileReader();
-                reader.onloadend = function() {
-                    document.getElementById('loader').style.display = 'none';
-                    const dataUrl = reader.result;
-                    // 先嘗試新視窗，被擋住就直接跳轉
-                    const newWin = window.open(dataUrl, '_blank');
-                    if (!newWin || newWin.closed || typeof newWin.closed == 'undefined') {
-                        location.href = dataUrl;
-                    }
-                };
-                reader.readAsDataURL(blob);
-            } else {
-                // 電腦端：維持 iframe 預覽
-                const url = URL.createObjectURL(blob);
-                document.getElementById('previewFrame').src = url;
-                document.getElementById('loader').style.display = 'none';
-                document.getElementById('previewModal').style.display = 'flex';
-            }
-        } catch (e) {
-            alert("預覽失敗：" + e.message);
-            document.getElementById('loader').style.display = 'none';
-        }
+        const modal = document.getElementById('previewModal');
+        const container = document.getElementById('previewContent');
+        const template = document.getElementById('pdfTemplate');
+
+        document.body.classList.add('preview-mode-active');
+        container.appendChild(template);
+
+        // 自動縮放以符合手機寬度
+        const scale = (window.innerWidth * 0.9) / 800;
+        if(scale < 1) { template.style.transform = `scale(${scale})`; }
+
+        document.getElementById('loader').style.display = 'none';
+        modal.style.display = 'flex';
     }
 
-    function closeModal() { 
-        document.getElementById('previewModal').style.display = 'none'; 
-        document.getElementById('previewFrame').src = ""; 
+    function closeModal() {
+        const template = document.getElementById('pdfTemplate');
+        document.body.classList.remove('preview-mode-active');
+        document.body.appendChild(template);
+        template.style.transform = "none";
+        document.getElementById('previewModal').style.display = 'none';
     }
 
     async function finalSubmit() {
-        const email = document.getElementById('targetEmail').value;
-        if(!email) return alert("請填寫收件 Email。");
-        if(!confirm("確定內容無誤並送出歸檔？")) return;
-
+        if(!confirm("確定送出歸檔？")) return;
         document.getElementById('loader').style.display = 'flex';
-        const blob = await generatePDFBlob();
+        
+        fillTemplate();
+        
+        const canvas = await html2canvas(document.getElementById('pdfTemplate'), { scale: 3 });
+        const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 210, (canvas.height * 210) / canvas.width);
+        
         const reader = new FileReader();
-        reader.readAsDataURL(blob);
+        reader.readAsDataURL(pdf.output('blob'));
         reader.onloadend = async () => {
             const base64 = reader.result.split(',')[1];
             try {
-                const res = await fetch(GAS_URL, {
+                await fetch(GAS_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        email: email,
+                        email: document.getElementById('targetEmail').value,
                         fileData: base64,
                         fileName: `${document.getElementById('pdfTitle').innerText}_${document.getElementById('trainName').value}.pdf`
                     })
                 });
-                alert("歸檔成功！檔案已儲存雲端並寄送通知。");
+                alert("歸檔成功！檔案已儲存雲端。");
                 location.reload();
             } catch(e) {
-                alert("送出失敗，請檢查網路或 GAS 網址。");
+                alert("送出失敗。");
                 document.getElementById('loader').style.display = 'none';
             }
         };
