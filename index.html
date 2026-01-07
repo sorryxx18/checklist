@@ -280,24 +280,27 @@
         reader.readAsDataURL(pdf.output('blob'));
         reader.onloadend = async () => {
             const base64 = reader.result.split(',')[1];
-            try {
+           try {
+                // 修改處：移除 headers 並改用 text/plain 避免 CORS 預檢失敗
                 await fetch(GAS_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    mode: 'no-cors', // 增加此行
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({
                         email: document.getElementById('targetEmail').value,
                         fileData: base64,
                         fileName: `${document.getElementById('pdfTitle').innerText}_${document.getElementById('trainName').value}.pdf`
                     })
                 });
-                alert("歸檔成功！檔案已儲存雲端。");
+                
+                // 注意：mode: 'no-cors' 下 fetch 無法取得回傳值，
+                // 但只要後端有收到，檔案就會存進去。
+                alert("歸檔程序已啟動！請至雲端硬碟或 Email 確認。");
                 location.reload();
             } catch(e) {
-                alert("送出失敗。");
+                alert("連線失敗，請檢查 GAS 網址是否正確。");
                 document.getElementById('loader').style.display = 'none';
             }
-        };
-    }
 </script>
 </body>
 </html>
