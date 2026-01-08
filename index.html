@@ -52,14 +52,38 @@
         .modal-btns { display: flex; gap: 10px; padding: 15px; background: #222; }
 
         /* === PDF 正式模板 (精確 A4 佈局) === */
-        #pdfTemplate { width: 800px; padding: 40px 50px; background: white; position: absolute; left: -9999px; color: black; box-sizing: border-box; display: flex; flex-direction: column; }
-        .pdf-title { text-align: center; font-size: 26px; font-weight: bold; margin-bottom: 20px; }
-        .pdf-meta { display: flex; justify-content: space-between; font-size: 17px; font-weight: bold; margin: 5px 0; }
-        
-        .pdf-table { width: 100%; border-collapse: collapse; border: 2px solid black; table-layout: fixed; }
-        .pdf-table th, .pdf-table td { border: 1px solid black; padding: 8px 4px; font-size: 16px; text-align: center; vertical-align: middle; line-height: 1.4; word-wrap: break-word; }
-        .pdf-left { text-align: left !important; padding-left: 12px; }
-        .v-mark { font-family: Arial, sans-serif; font-weight: bold; font-size: 24px; color: black; }
+        #pdfTemplate { 
+    width: 800px; 
+    padding: 30px 40px; 
+    background: white; 
+    position: absolute; 
+    left: -9999px; 
+    color: black; 
+    box-sizing: border-box; 
+}
+.pdf-table { 
+    width: 720px; /* 固定總寬度，預留左右 padding */
+    border-collapse: collapse; 
+    border: 1.5px solid black; 
+    table-layout: fixed; 
+    margin: 0 auto;
+}
+.pdf-table th, .pdf-table td { 
+    border: 1px solid black; 
+    padding: 6px 2px; 
+    font-size: 15px; 
+    text-align: center; 
+    vertical-align: middle; 
+    word-wrap: break-word;
+}
+/* 精準定義每一欄比例 */
+.col-1 { width: 45px; }  /* 項次 */
+.col-2 { width: 330px; } /* 安全檢查注意事項 */
+.col-3 { width: 55px; }  /* 是 */
+.col-4 { width: 55px; }  /* 否 */
+.col-5 { width: 65px; }  /* 不適用 */
+.col-6 { width: 90px; }  /* 待改進事項 */
+.col-7 { width: 80px; }  /* 其他 */
 
         /* 簽章區塊還原 */
         .pdf-sig-row { display: flex; border: 2px solid black; border-top: none; min-height: 140px; }
@@ -141,16 +165,19 @@
     </div>
     <table class="pdf-table">
         <thead style="background-color: #f2f2f2;">
-            <tr>
-                <th style="width: 7%;">項次</th>
-                <th style="width: 48%;">安全檢查注意事項</th>
-                <th style="width: 8%;">是</th>
-                <th style="width: 8%;">否</th>
-                <th style="width: 8%;">不適用</th>
-                <th style="width: 11%;">待改進</th>
-                <th style="width: 10%;">其他</th>
-            </tr>
-        </thead>
+    <tr>
+        <th class="col-1" rowspan="2">項次</th>
+        <th class="col-2" rowspan="2">安全檢查注意事項</th>
+        <th colspan="3" style="height:30px;">符合情形/項目</th>
+        <th class="col-6" rowspan="2">待改進<br>事項</th>
+        <th class="col-7" rowspan="2">其他</th>
+    </tr>
+    <tr>
+        <th class="col-3">是</th>
+        <th class="col-4">否</th>
+        <th class="col-5">不適用</th>
+    </tr>
+</thead>
         <tbody id="pdfTbody"></tbody>
         <tr><td colspan="7" class="pdf-left" style="height:80px; vertical-align:top; padding:10px;" id="pdfMemo">備註：</td></tr>
     </table>
@@ -251,7 +278,12 @@
         fillTemplate();
         setTimeout(async () => {
             const target = document.getElementById('pdfTemplate');
-            const canvas = await html2canvas(target, { scale: 2, width: 800, windowWidth: 800 });
+            const canvas = await html2canvas(target, { 
+    scale: 2, 
+    width: 800, 
+    windowWidth: 900, // 模擬較寬視窗抓取，確保右緣不被切斷
+    useCORS: true 
+});
             document.getElementById('previewImg').src = canvas.toDataURL('image/jpeg', 0.9);
             document.getElementById('loader').style.display = 'none';
             document.getElementById('previewModal').style.display = 'flex';
