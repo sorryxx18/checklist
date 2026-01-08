@@ -47,14 +47,20 @@
 
         /* === PDF 影子模板 (物理尺寸還原) === */
         #pdfTemplate { 
-    width: 1000px; 
+    width: 1100px; /* 增加寬度確保所有欄位展開 */
     padding: 40px; 
     background: white; 
     position: absolute; 
     left: -9999px; 
     color: black; 
     box-sizing: border-box; 
-    display: block !important;
+}
+/* 強制表格欄位不縮減 */
+.pdf-table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    border: 2px solid black; 
+    table-layout: fixed; /* 固定佈局，欄位寬度才不會亂跑 */
 }
         .pdf-title { text-align: center; font-size: 28px; font-weight: bold; padding-bottom: 15px; }
         .pdf-table { width: 100%; border-collapse: collapse; border: 2.5px solid black; table-layout: fixed; }
@@ -67,13 +73,29 @@
         .pdf-sig-cell:last-child { border-right: none; }
 
         #loader { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.95); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; }
+        /* 新增轉圈圈動畫圖案 */
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid #ffffff; /* 圈圈轉動的顏色 */
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+}
+
+/* 轉圈圈的動作定義 */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
     </style>
 </head>
 <body>
 
 <div id="loader">
-    <i class="fas fa-circle-notch fa-spin fa-4x" style="color:var(--fire-red)"></i>
-    <p style="margin-top:20px; font-weight:bold;">檔案傳送歸檔中...</p>
+    <div class="spinner"></div> <!-- 新增這行，這就是轉圈圈 -->
+    <p>正在寄送 Email，請稍候...</p>
 </div>
 
 <div class="app-shell">
@@ -265,7 +287,13 @@
 
     async function downloadPDF() {
         const target = document.getElementById('pdfTemplate');
-        const canvas = await html2canvas(target, { scale: 2 });
+        // 修改這一段：強制抓取寬度，解決亂截圖問題
+const canvas = await html2canvas(target, { 
+    scale: 2, 
+    useCORS: true,
+    width: 1100,      // 強制抓取模板的完整寬度
+    windowWidth: 1100 // 模擬在大螢幕下截圖
+});
         const { jsPDF } = window.jspdf;
         const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 210, (canvas.height * 210) / canvas.width);
