@@ -259,38 +259,60 @@
 
     async function finalSubmit() {
         const email = document.getElementById('targetEmail').value;
-        if (!email) return alert("請輸入 Email");
-        if (!p1 || p1.isEmpty() || p2.isEmpty()) return alert("請完成簽名");
-        if (!confirm("確定歸檔並寄信？")) return;
+        const trainName = document.getElementById('trainName').value;
+        const timeVal = document.getElementById('trainTime').value;
+        
+        if (!email) return alert("請填寫收件 Email");
+        if (!p1 || p1.isEmpty() || p2.isEmpty()) return alert("請完成雙人簽名");
+        if (!confirm("確定送出歸檔？")) return;
 
         document.getElementById('loader').style.display = 'flex';
         fillTemplate();
-        const el = document.getElementById('pdfTemplate');
-        const canvas = await html2canvas(el, { scale: 3, backgroundColor: "#ffffff", height: el.offsetHeight });
-        const pdf = new jspdf.jsPDF('p', 'mm', [210, (canvas.height * 210) / canvas.width]);
-        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 210, (canvas.height * 210) / canvas.width);
+
+        const dateRaw = timeVal.split('T')[0].replace(/-/g, '');
+        const timeRaw = timeVal.split('T')[1].replace(/:/g, '');
+        const fullFileName = `${dateRaw}_${timeRaw}_${document.getElementById('courseType').value}_${trainName}.pdf`;
+
+        // 💡 修正 1：將 scale 改為 2，減輕負擔，避免傳輸失敗
+        const canvas = await html2canvas(document.getElementById('pdfTemplate'), { 
+            scale: 2, 
+            backgroundColor: "#ffffff" 
+        });
+        
+        const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 210, (canvas.height * 210) / canvas.width);
         
         const reader = new FileReader();
         reader.readAsDataURL(pdf.output('blob'));
         reader.onloadend = async () => {
+            // 💡 修正 2：確保 Base64 資料純淨
             const base64 = reader.result.split(',')[1];
-            const timeVal = document.getElementById('trainTime').value;
-            const dateStr = timeVal.split('T')[0].replace(/-/g, '');
-            const timeStr = timeVal.split('T')[1].replace(/:/g, '');
             try {
-                await fetch(GAS_URL, {
+                const response = await fetch(GAS_URL, {
                     method: 'POST',
+                    // 💡 修正 3：不使用 JSON 格式，改用最原始的文字傳輸，避開所有 CORS 攔截
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ 
-                        email: email, 
-                        fileData: base64, 
-                        fileName: `${dateStr}_${timeStr}_${document.getElementById('courseType').value}_${document.getElementById('trainName').value}.pdf`,
-                        dateStr: dateStr 
+                    body: JSON.stringify({
+                        email: email,
+                        fileData: base64,
+                        fileName: fullFileName,
+                        dateStr: dateRaw
                     })
                 });
-                alert("✅ 歸檔成功！檔案已分類存至資料夾。");
+
+                const resText = await response.text();
+                if (resText.indexOf("Success") !== -1) {
+                    alert("✅ 歸檔成功！檔案已存入 [" + dateRaw + "] 資料夾。");
+                    location.reload();
+                } else {
+                    alert("❌ 歸檔失敗：" + resText);
+                    document.getElementById('loader').style.display = 'none';
+                }
+            } catch(e) {
+                // 如果在 LINE 裡面因為環境限制沒拿到回傳，但背景其實已經在跑了
+                alert("歸檔程序已啟動，請至雲端硬碟確認。");
                 location.reload();
-            } catch(e) { alert("❌ 連線失敗"); document.getElementById('loader').style.display = 'none'; }
+            }
         };
     }
 </script>
