@@ -14,10 +14,10 @@
         :root { --fire-red: #c0392b; --gold: #d4af37; --dark: #2c3e50; }
         body { font-family: "Microsoft JhengHei", sans-serif; background: var(--dark); margin: 0; padding: 10px; min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; }
 
+        /* UI 介面樣式 */
         .app-shell { width: 100%; max-width: 500px; background: white; border: 4px solid var(--gold); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); overflow: hidden; }
         .app-header { background: var(--fire-red); padding: 20px; text-align: center; border-bottom: 4px solid var(--gold); }
         .app-header h2 { margin: 0; color: #fff; font-size: 1.3rem; letter-spacing: 1px; }
-
         .content { padding: 20px; box-sizing: border-box; }
         .step { display: none; } .step.active { display: block; animation: fadeIn 0.4s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
@@ -39,19 +39,28 @@
         .btn-next { background: var(--fire-red); }
         .btn-prev { background: #7f8c8d; }
 
-        /* === 預覽視窗 === */
+        /* === 預覽 Modal === */
         #previewModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10000; flex-direction: column; }
         #previewHeader { background: var(--fire-red); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
         #previewContent { flex: 1; overflow: auto; padding: 10px; display: flex; justify-content: center; background: #333; }
         #previewImg { max-width: 100%; background: white; box-shadow: 0 0 40px black; }
         .modal-btns { display: flex; gap: 10px; padding: 15px; background: #222; }
 
-        /* === PDF 影子模板 (修正擠壓) === */
-        #pdfTemplate { width: 1000px; padding: 40px; background: white; position: absolute; left: -9999px; color: black; box-sizing: border-box; }
-        .pdf-table { width: 100%; border-collapse: collapse; border: 2.5px solid black; table-layout: fixed; } 
-        .pdf-table th, .pdf-table td { border: 1px solid black; padding: 12px 8px; font-size: 19px; text-align: center; vertical-align: middle; line-height: 1.4; word-wrap: break-word; }
-        .pdf-left { text-align: left !important; padding-left: 15px; }
-        .v-mark { font-family: Arial, sans-serif; font-weight: bold; font-size: 28px; }
+        /* === PDF 影子模板 (嚴格還原 A4 排版) === */
+        #pdfTemplate { width: 210mm; padding: 15mm; background: white; position: absolute; left: -9999px; color: black; box-sizing: border-box; }
+        .pdf-title-box { text-align: center; font-size: 26px; font-weight: bold; padding-bottom: 15px; }
+        .pdf-meta-row { display: flex; justify-content: space-between; font-size: 17px; font-weight: bold; margin-bottom: 5px; }
+        
+        .pdf-table { width: 100%; border-collapse: collapse; border: 2px solid black; table-layout: fixed; }
+        .pdf-table th, .pdf-table td { border: 1px solid black; padding: 8px 4px; font-size: 15px; text-align: center; vertical-align: middle; line-height: 1.3; overflow: hidden; }
+        .pdf-left { text-align: left !important; padding-left: 10px; }
+        .v-mark { font-family: Arial, sans-serif; font-weight: bold; font-size: 22px; }
+
+        /* 簽章區塊還原 */
+        .pdf-sig-grid { display: grid; grid-template-columns: 1fr 1fr; border: 2px solid black; border-top: none; }
+        .pdf-sig-box { border-right: 1.5px solid black; height: 120px; padding: 8px; font-size: 16px; font-weight: bold; }
+        .pdf-sig-box:last-child { border-right: none; }
+        .sig-img { max-height: 80px; margin-top: 10px; }
 
         #loader { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.95); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; }
     </style>
@@ -60,12 +69,13 @@
 
 <div id="loader">
     <i class="fas fa-circle-notch fa-spin fa-4x" style="color:var(--fire-red)"></i>
-    <p style="margin-top:20px; font-weight:bold; font-size: 1.2rem;">正在同步至雲端...</p>
+    <p style="margin-top:20px; font-weight:bold; font-size: 1.2rem;">正在生成並上傳檢核表...</p>
 </div>
 
 <div class="app-shell">
     <div class="app-header"><h2>訓練安全檢核系統</h2></div>
     <div class="content">
+        <!-- 第一步 -->
         <div class="step active" id="step1">
             <label>1. 檢核表種類</label>
             <select id="courseType" onchange="updateItems()">
@@ -81,16 +91,17 @@
                 <option value="water">水域訓練安全檢核表</option>
             </select>
             <label>2. 訓練名稱/期別</label>
-            <input type="text" id="trainName" placeholder="例如：空氣呼吸器訓練">
+            <input type="text" id="trainName" placeholder="例如：115年救助隊複訓">
             <label>3. 訓練日期時間</label>
             <input type="datetime-local" id="trainTime">
             <label>4. 訓練地點</label>
             <input type="text" id="trainLoc" value="內湖訓練中心">
             <label>5. 存檔接收 Email</label>
             <input type="email" id="targetEmail" placeholder="收件人信箱">
-            <div class="btn-group"><button class="btn btn-next" onclick="goStep(2)">填寫檢核表 <i class="fas fa-arrow-right"></i></button></div>
+            <div class="btn-group"><button class="btn btn-next" onclick="goStep(2)">下一步 <i class="fas fa-arrow-right"></i></button></div>
         </div>
 
+        <!-- 第二步 -->
         <div class="step" id="step2">
             <div id="cardList"></div>
             <label>備註事項</label>
@@ -101,6 +112,7 @@
             </div>
         </div>
 
+        <!-- 第三步 -->
         <div class="step" id="step3">
             <label>教官簽章</label>
             <div class="sig-box"><canvas id="c1"></canvas></div>
@@ -114,8 +126,9 @@
     </div>
 </div>
 
+<!-- 預覽視窗 -->
 <div id="previewModal">
-    <div id="previewHeader"><span>正式 PDF 預覽</span><i class="fas fa-times fa-lg" onclick="closePreview()"></i></div>
+    <div id="previewHeader"><span>正式 PDF 樣式預覽</span><i class="fas fa-times fa-lg" onclick="closePreview()"></i></div>
     <div id="previewContent"><img id="previewImg" src=""></div>
     <div class="modal-btns">
         <button class="btn btn-prev" onclick="closePreview()">返回修改</button>
@@ -124,31 +137,33 @@
     </div>
 </div>
 
-<!-- PDF 實體模板 (固定寬度防止擠壓) -->
+<!-- PDF 實體模板 (還原截圖樣式) -->
 <div id="pdfTemplate">
+    <div class="pdf-title-box" id="pdfTitle"></div>
+    <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">訓練名稱：<span id="pdfCourseName"></span></div>
+    <div class="pdf-meta-row">
+        <span id="pdfDateDisplay"></span>
+        <span id="pdfLocDisplay"></span>
+    </div>
     <table class="pdf-table">
-        <tr><th colspan="7" style="border:none; font-size:32px; padding:20px 0;" id="pdfTitle"></th></tr>
-        <tr><td colspan="7" class="pdf-left" style="border:none; font-weight:bold; font-size:22px; padding-bottom:10px;">訓練名稱：<span id="pdfCourseName"></span></td></tr>
-        <tr>
-            <td colspan="4" class="pdf-left" style="border:none; font-weight:bold; font-size:20px;" id="pdfDateDisplay"></td>
-            <td colspan="3" class="pdf-left" style="border:none; font-weight:bold; font-size:20px; text-align:right !important;" id="pdfLocDisplay"></td>
-        </tr>
-        <tr style="background:#f2f2f2;">
-            <th width="8%">項次</th>
-            <th width="42%">安全檢查注意事項</th>
-            <th width="10%">是</th>
-            <th width="10%">否</th>
-            <th width="10%">不適用</th>
-            <th width="12%">待改進或<br>檢修事項</th>
-            <th width="8%">其他</th>
-        </tr>
+        <thead style="background:#f2f2f2;">
+            <tr>
+                <th width="8%">項次</th>
+                <th width="42%">安全檢查注意事項</th>
+                <th width="9%">是</th><th width="9%">否</th><th width="9%">不適用</th>
+                <th width="12%">待改進或<br>檢修事項</th>
+                <th width="11%">其他</th>
+            </tr>
+        </thead>
         <tbody id="pdfTbody"></tbody>
-        <tr><td colspan="7" class="pdf-left" style="height:120px; vertical-align:top;" id="pdfMemo">備註：</td></tr>
         <tr>
-            <td colspan="4" class="pdf-left" style="height:160px; vertical-align:top; border-right:2.5px solid black;">教官簽章：<br><img id="img1" style="max-height:100px; margin-top:20px;"></td>
-            <td colspan="3" class="pdf-left" style="height:160px; vertical-align:top;">當日安全官簽章：<br><img id="img2" style="max-height:100px; margin-top:20px;"></td>
+            <td colspan="7" class="pdf-left" style="height:80px; vertical-align:top;" id="pdfMemo">備註：</td>
         </tr>
     </table>
+    <div class="pdf-sig-grid">
+        <div class="pdf-sig-box">教官簽章：<br><img id="img1" class="sig-img"></div>
+        <div class="pdf-sig-box">當日安全官簽章：<br><img id="img2" class="sig-img"></div>
+    </div>
 </div>
 
 <script>
@@ -166,8 +181,6 @@
         scba: { title: "臺北市政府消防局訓練中心空氣呼吸器訓練場訓練安全檢核表", items: ["於訓練前是否有對學員進行危害告知?", "是否依照消防署或局頒教材內容安排進行上課。", "現場操作人員有無身體不適情形？現場醫療器材有無準備？", "是否選用適當操作場地(淨空並區分操作教學及待命空間)", "教官是否確實瞭解設備器材操作步驟及注意事項?", "操作前檢查所用設備器材外觀及功能是否正常?", "學員是否著適當個人防護裝備?", "進入侷限空間鐵籠區訓練時，所有人員皆需穿著消防鞋或救助鞋保護腳部安全", "入室前教官是否進行人員管制編組?(至少2人1組，同進同出)，學員依教官任務分工操作?", "入室前是否檢查空氣呼吸器壓力錶及殘壓警報器功能正常？(需氣量監控)", "是否擬定安全計畫(備援方案)？", "注意操作者身心狀況或其他安全顧慮，並建立輪替機制", "殘壓警報響起時，教官須徵詢學員繼續操作意願，接續操作或終止訓練。", "操作時教官發現學員有任何身體不適癥狀，得即時宣布暫停或中止訓練", "侷限空間鐵籠訓練路徑變換調整後，教官需落實安全夾放置及確定鐵網穩定後再行訓練"] },
         water: { title: "臺北市政府消防局水域訓練安全檢核表", items: ["於訓練前是否有對學員進行危害告知?", "是否依照消防署或局頒教材內容安排進行上課。", "是否已熟知署頒消防安全救災手冊內容之相關規定，並依規定要求進行操作？", "現場操作人員有無身體不適情形？現場醫療器材有無準備？", "評估天候與水情狀況(水流、深淺、水溫、渦流、暗礁)是否適合操作?", "是否已瞭解所使用救生裝備器具特性，並選用適合的裝備器材?", "是否依訓練項目穿戴完整水域救生裝備?", "課程前教官是否有示範？", "是否實施人員編組，並確實遵守教官之任務指示分工操作?", "是否排定上游監看人員及下游確保人員", "入水前是否已完成熱身運動", "是否有擬定安全計畫(備援方案)？", "使用後是否確實檢查救生器具狀況並確實清潔"] }
     };
-
-    let p1, p2;
 
     function updateItems() {
         const type = document.getElementById('courseType').value;
@@ -220,7 +233,7 @@
         const [hh, mm] = timeVal.split('T')[1].split(':');
 
         document.getElementById('pdfTitle').innerText = data.title;
-        document.getElementById('pdfCourseName').innerText = document.getElementById('trainName').value; // 帶入課目名稱
+        document.getElementById('pdfCourseName').innerText = document.getElementById('trainName').value;
         document.getElementById('pdfDateDisplay').innerText = `時間：${y-1911} 年 ${m} 月 ${d} 日 ${hh}：${mm}`;
         document.getElementById('pdfLocDisplay').innerText = "地點：" + document.getElementById('trainLoc').value;
         document.getElementById('pdfMemo').innerText = "備註：" + document.getElementById('memo').value;
@@ -243,7 +256,7 @@
         fillTemplate();
         const target = document.getElementById('pdfTemplate');
         const canvas = await html2canvas(target, { scale: 2 });
-        document.getElementById('previewImg').src = canvas.toDataURL('image/jpeg', 0.95);
+        document.getElementById('previewImg').src = canvas.toDataURL('image/jpeg', 0.9);
         document.getElementById('loader').style.display = 'none';
         document.getElementById('previewModal').style.display = 'flex';
     }
@@ -252,7 +265,7 @@
 
     async function downloadPDF() {
         const target = document.getElementById('pdfTemplate');
-        const canvas = await html2canvas(target, { scale: 2 });
+        const canvas = await html2canvas(target, { scale: 2.5 });
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF('p', 'mm', 'a4');
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 210, (canvas.height * 210) / canvas.width);
@@ -262,12 +275,10 @@
     async function finalSubmit() {
         document.getElementById('loader').style.display = 'flex';
         const target = document.getElementById('pdfTemplate');
-        const canvas = await html2canvas(target, { scale: 2 });
+        const canvas = await html2canvas(target, { scale: 2.5 });
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF('p', 'mm', 'a4');
         pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 210, (canvas.height * 210) / canvas.width);
-        
-        // 清理 Base64 標頭
         const base64 = pdf.output('datauristring').split(',')[1];
         const dateRaw = document.getElementById('trainTime').value.split('T')[0].replace(/-/g, '');
 
@@ -283,7 +294,7 @@
         }).then(res => res.text()).then(txt => {
             document.getElementById('loader').style.display = 'none';
             if (txt.includes("Success")) {
-                alert("✅ 歸檔成功！檔案已存至雲端並發信。");
+                alert("✅ 歸檔成功！檔案已儲存。");
                 location.reload();
             } else {
                 alert("❌ 歸檔異常：" + txt);
