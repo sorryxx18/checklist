@@ -46,7 +46,16 @@
         .modal-btns { display: flex; gap: 10px; padding: 15px; background: #222; }
 
         /* === PDF 影子模板 (物理尺寸還原) === */
-        #pdfTemplate { width: 210mm; padding: 15mm; background: white; position: absolute; left: -9999px; color: black; box-sizing: border-box; }
+        #pdfTemplate { 
+    width: 1000px; 
+    padding: 40px; 
+    background: white; 
+    position: absolute; 
+    left: -9999px; 
+    color: black; 
+    box-sizing: border-box; 
+    display: block !important;
+}
         .pdf-title { text-align: center; font-size: 28px; font-weight: bold; padding-bottom: 15px; }
         .pdf-table { width: 100%; border-collapse: collapse; border: 2.5px solid black; table-layout: fixed; }
         .pdf-table th, .pdf-table td { border: 1px solid black; padding: 8px 4px; font-size: 16px; text-align: center; vertical-align: middle; line-height: 1.3; word-wrap: break-word; }
@@ -122,7 +131,7 @@
     <div class="modal-btns">
         <button class="btn btn-prev" onclick="closePreview()">返回修改</button>
         <button class="btn" style="background:#27ae60;" onclick="downloadPDF()">下載 PDF</button>
-        <button class="btn btn-next" onclick="finalSubmit()">確認歸檔</button>
+        <button class="btn btn-next" onclick="finalSubmit()">確認寄送 Email</button>
     </div>
 </div>
 
@@ -264,34 +273,52 @@
     }
 
     async function finalSubmit() {
-        if (GAS_URL.includes("在此輸入")) return alert("請先設定 GAS URL");
-        document.getElementById('loader').style.display = 'flex';
-        const target = document.getElementById('pdfTemplate');
-        const canvas = await html2canvas(target, { scale: 2 });
-        const { jsPDF } = window.jspdf;
-        const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
-        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 210, (canvas.height * 210) / canvas.width);
-        const base64 = pdf.output('datauristring').split(',')[1];
-        const dateRaw = document.getElementById('trainTime').value.split('T')[0].replace(/-/g, '');
+    if (GAS_URL.includes("在此輸入")) return alert("請先設定 GAS URL");
+    
+    // 1. 顯示讀取中，並更改文字
+    document.getElementById('loader').style.display = 'flex';
+    document.querySelector('#loader p').innerText = "Email 寄送中，請稍候...";
 
-        fetch(GAS_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({
-                email: document.getElementById('targetEmail').value,
-                fileData: base64,
-                fileName: document.getElementById('trainName').value + "_安全檢核.pdf",
-                dateStr: dateRaw
-            })
-        }).then(res => res.text()).then(txt => {
-            document.getElementById('loader').style.display = 'none';
-            if (txt.includes("Success")) { alert("✅ 歸檔成功！"); location.reload(); } else { alert("❌ 異常：" + txt); }
-        }).catch(() => {
-            document.getElementById('loader').style.display = 'none';
-            alert("❌ 網路連線錯誤");
-        });
-    }
+    // 2. 執行精確截圖 (解決亂截圖問題)
+    const target = document.getElementById('pdfTemplate');
+    const canvas = await html2canvas(target, { 
+        scale: 2, 
+        useCORS: true, 
+        width: 1000, // 強制抓取 1000px 寬度，確保右側欄位不被切掉
+        windowWidth: 1000 
+    });
+    
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    // 計算 A4 比例，確保畫面完整填滿
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 210, (canvas.height * 210) / canvas.width);
+    
+    const base64 = pdf.output('datauristring').split(',')[1];
+    const dateRaw = document.getElementById('trainTime').value.split('T')[0].replace(/-/g, '');
 
+    // 3. 傳送至 GAS 並接收回饋
+    fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+            email: document.getElementById('targetEmail').value,
+            fileData: base64,
+            fileName: document.getElementById('trainName').value + "_安全檢核表.pdf",
+            dateStr: dateRaw
+        })
+    }).then(res => res.text()).then(txt => {
+        document.getElementById('loader').style.display = 'none';
+        if (txt.includes("Success")) {
+            alert("✅ Email 已成功寄出並備份至雲端！");
+            location.reload();
+        } else {
+            alert("❌ 寄送異常：" + txt);
+        }
+    }).catch(err => {
+        document.getElementById('loader').style.display = 'none';
+        alert("❌ 網路連線錯誤或 Email 寄送失敗，請檢查網路。");
+    });
+}
     window.onload = () => {
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
