@@ -5,7 +5,6 @@
     <title>消防訓練安全檢核系統</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
-    <!-- 必要 Library -->
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@5.0.7/dist/signature_pad.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -24,7 +23,7 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
 
         label { display: block; font-weight: bold; margin-top: 15px; color: var(--dark); border-left: 5px solid var(--fire-red); padding-left: 10px; font-size: 0.9rem; }
-        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; margin-top: 8px; font-size: 16px; box-sizing: border-box; background: #fafafa; }
+        input, select, textarea { width: 100%; padding: 14px; border: 1px solid #ddd; border-radius: 10px; margin-top: 8px; font-size: 16px; box-sizing: border-box; background: #fafafa; }
         
         .q-card { background: #fdfdfd; border: 1px solid #eee; border-radius: 12px; padding: 15px; margin-bottom: 15px; border-left: 6px solid var(--gold); }
         .q-text { font-size: 1rem; margin-bottom: 12px; color: #333; line-height: 1.5; text-align: left; }
@@ -32,7 +31,7 @@
         .opt-btn { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 8px; background: #fff; cursor: pointer; text-align: center; font-weight: bold; color: #666; }
         .opt-btn.selected { background: var(--fire-red); color: white; border-color: var(--fire-red); }
 
-        .sig-box { border: 2px dashed #b2bec3; border-radius: 12px; height: 160px; margin-top: 10px; background: #fff; touch-action: none; position: relative; }
+        .sig-box { border: 2px dashed #b2bec3; border-radius: 12px; height: 180px; margin-top: 10px; background: #fff; touch-action: none; position: relative; }
         canvas { width: 100%; height: 100%; }
 
         .btn-group { display: flex; gap: 10px; margin-top: 25px; padding-bottom: 20px; }
@@ -41,12 +40,12 @@
         .btn-prev { background: #7f8c8d; }
         .btn-preview { background: #2980b9; }
 
-        /* === PDF 仿真影子樣板 === */
-        #pdfTemplate { width: 800px; background: white; position: absolute; left: -9999px; color: black; padding: 40px; box-sizing: border-box; }
+        /* === PDF 影子樣板 (100% 原文呈現) === */
+        #pdfTemplate { width: 800px; min-height: 1120px; padding: 50px; background: white; position: absolute; left: -9999px; color: black; box-sizing: border-box; }
         .pdf-table { width: 100%; border-collapse: collapse; border: 2px solid black; }
         .pdf-table th, .pdf-table td { border: 1px solid black; padding: 8px; font-size: 15px; text-align: center; vertical-align: middle; }
         .pdf-left { text-align: left !important; padding-left: 10px; line-height: 1.5; }
-        .v-mark { font-family: Arial; font-weight: bold; font-size: 24px; }
+        .v-mark { font-family: Arial, sans-serif; font-weight: bold; font-size: 24px; }
 
         #previewModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10000; flex-direction: column; }
         #previewContent { flex: 1; overflow: auto; padding: 20px; display: flex; justify-content: center; background: #333; }
@@ -59,13 +58,12 @@
 
 <div id="loader">
     <i class="fas fa-circle-notch fa-spin fa-4x" style="color:var(--fire-red)"></i>
-    <p style="margin-top:20px; font-weight:bold; color: var(--dark);">檔案歸檔處理中...</p>
+    <p style="margin-top:20px; font-weight:bold;">檔案處理中...</p>
 </div>
 
 <div class="app-shell">
     <div class="app-header"><h2>消防訓練安全檢核系統</h2></div>
     <div class="content">
-        <!-- Step 1 -->
         <div class="step active" id="step1">
             <label>1. 檢核表種類</label>
             <select id="courseType" onchange="updateItems()">
@@ -74,14 +72,14 @@
                 <option value="rescue">救助破壞操作安全檢核表</option>
                 <option value="car">車禍救助訓練操作安全檢核表</option>
                 <option value="indoor">入室搜救訓練安全檢核表</option>
-                <option value="fire">實火燃燒訓練安全檢核表</option>
+                <option value="fire">訓練中心實火燃燒訓練安全檢核表</option>
                 <option value="diving">潛水救援訓練安全檢核表</option>
                 <option value="physical">體能訓練安全檢核表</option>
-                <option value="scba">空氣呼吸器訓練場安全檢核表</option>
+                <option value="scba">空氣呼吸器訓練場檢核表</option>
                 <option value="water">水域訓練安全檢核表</option>
             </select>
             <label>2. 訓練名稱/期別</label>
-            <input type="text" id="trainName" placeholder="例如：救助隊複訓115-1">
+            <input type="text" id="trainName" placeholder="例如：救助隊第1期複訓">
             <label>3. 訓練日期時間</label>
             <input type="datetime-local" id="trainTime">
             <label>4. 訓練地點</label>
@@ -91,7 +89,6 @@
             <div class="btn-group"><button class="btn btn-next" onclick="goStep(2)">進入檢核清單 <i class="fas fa-chevron-right"></i></button></div>
         </div>
 
-        <!-- Step 2 -->
         <div class="step" id="step2">
             <div id="cardList"></div>
             <label>備註事項</label>
@@ -102,18 +99,17 @@
             </div>
         </div>
 
-        <!-- Step 3 -->
         <div class="step" id="step3">
             <label>教官簽章</label>
             <div class="sig-box"><canvas id="c1"></canvas></div>
-            <button onclick="p1.clear()" style="margin:8px 0; border:none; background:none; color:var(--fire-red); font-weight:bold;">[ 清除重簽 ]</button>
+            <button onclick="p1.clear()" style="margin:8px 0; border:none; background:none; color:var(--fire-red); font-weight:bold;">[ 清除 ]</button>
             <label>當日安全官簽章</label>
             <div class="sig-box"><canvas id="c2"></canvas></div>
-            <button onclick="p2.clear()" style="margin:8px 0; border:none; background:none; color:var(--fire-red); font-weight:bold;">[ 清除重簽 ]</button>
+            <button onclick="p2.clear()" style="margin:8px 0; border:none; background:none; color:var(--fire-red); font-weight:bold;">[ 清除 ]</button>
             <div class="btn-group">
                 <button class="btn btn-prev" onclick="goStep(2)">回上步</button>
                 <button class="btn btn-preview" onclick="showPreview()">預覽</button>
-                <button class="btn btn-next" style="background:#27ae60;" onclick="finalSubmit()">歸檔送出</button>
+                <button class="btn btn-next" style="background:#27ae60;" onclick="finalSubmit()">確認歸檔送出</button>
             </div>
         </div>
     </div>
@@ -121,7 +117,7 @@
 
 <div id="previewModal">
     <div style="background:var(--fire-red); color:white; padding:15px; display:flex; justify-content:space-between; align-items:center;">
-        <b>正式 PDF 樣式預覽</b>
+        <b>正式 PDF 樣式確認</b>
         <button onclick="closePreview()" style="color:white; border:none; background:none; font-size:24px;">&times;</button>
     </div>
     <div id="previewContent"><img id="previewImg" src=""></div>
@@ -131,10 +127,10 @@
     <table class="pdf-table">
         <thead>
             <tr><th colspan="7" style="border:none; font-size:26px; padding: 10px 0;" id="pdfTitle"></th></tr>
-            <tr><td colspan="7" style="border:none; text-align:left; font-size:16px; font-weight:bold; padding-bottom:10px;">名稱/期別：<span id="pdfCourseName"></span></td></tr>
+            <tr><td colspan="7" style="border:none; text-align:left; font-size:17px; font-weight:bold; padding-bottom:10px;">名稱/期別：<span id="pdfCourseName"></span></td></tr>
             <tr>
                 <td colspan="4" style="border:none; text-align:left; font-weight:bold; font-size:15px;" id="pdfTimeDisplay"></td>
-                <td colspan="3" style="border:none; text-align:right; font-weight:bold; font-size:15px;" id="pdfLocDisplay"></td>
+                <td colspan="3" style="border:none; text-align:right; font-weight:bold; font-size:16px;" id="pdfLocDisplay"></td>
             </tr>
             <tr>
                 <th rowspan="2" width="6%">項次</th><th rowspan="2" width="48%">安全檢查注意事項</th>
@@ -155,7 +151,7 @@
 </div>
 
 <script>
-    // ⚠️ 請替換為您的 GAS URL
+    // ⚠️ 貼上您的 GAS URL
     const GAS_URL = "https://script.google.com/macros/s/AKfycbw48s9V5IXvlhFVeEJQHp8F92oqulghGdfv77vAWVaPTAC3LoAl3zGDhNDWmNDlxwrMLw/exec"; 
     
     const checklists = {
@@ -167,7 +163,7 @@
         fire: { title: "臺北市政府消防局訓練中心實火燃燒訓練安全檢核表", items: ["於訓練前是否有對學員進行危害告知?", "是否依照消防署或局頒教材內容安排進行上課。", "現場操作人員有無身體不適情形？現場醫療器材有無準備？", "是否依訓練項目安排適當教官及安全官?並於操作課程前，事先討論瞭解操作流程及內容", "教官是否確實瞭解設備器材操作步驟及注意事項?", "操作前檢查所用設備器材外觀及功能是否正常?", "現場應指定1名專責人員操作1部(含以上)3.5噸以上性能良好水箱車供水線操作", "在點火之前預先部署1線充水之水線待命", "清空點火區域內雜物後，評估該空間是否安全通風?", "僅能在規範點火區域內點火?嚴禁使用燃油點火", "是否先由教官示範說明當日訓練項目及安全注意事項？", "是否穿戴完整個人防護裝備？", "是否擬定安全計畫(備援方案)？", "確認燃燒區棧板放置(棧板數量以不超過8塊為原則)、燃燒區地面的2進氣孔不可阻塞", "注意操作者身心狀況或其他安全顧慮，並建立輪替機制", "每次燃燒訓練後，餘燼應清除乾淨，避免發生悶燒復燃情形"] },
         diving: { title: "臺北市政府消防局潛水救援訓練安全檢核表", items: ["於訓練前是否有對學員進行危害告知?", "是否依照消防署或局頒教材內容安排進行上課。", "是否已熟知署頒消防安全救災手冊內容之相關規定，並依規定要求進行操作？", "現場操作人員有無身體不適情形？現場醫療器材有無準備？", "評估天候與水情狀況(水流、深淺、水溫、渦流、暗礁)是否適合操作?", "選擇的入水點是否已場勘並經過安全評估？", "入水前是否已完成熱身運動", "是否已瞭解所使用潛水救生裝備器具特性，並選用適合的裝備器材?", "是否穿戴完整潛水救生裝備？(岸上、入水者應有區分)", "課程前教官是否有示範？充分瞭解潛水訓練計畫、訓練目標?", "是否實施人員編組(至少2人1組)，並確實遵守教官之任務指示分工操作?", "是否有擬定安全計畫(備援方案)？(需有備援潛水員)", "是否排定上游監看人員及下游確保人員", "使用後是否確實檢查器具狀況並確實清潔"] },
         physical: { title: "臺北市政府消防局體能訓練安全檢核表", items: ["於訓練前是否有對學員進行危害告知?", "是否依訓練項目安排適當教官及安全官?", "是否先由教官示範說明當日訓練項目？", "評估天候狀況是否適合操作?", "是否選用適當操作場地?", "現場操作人員有無身體不適情形？現場醫療器材有無準備？", "是否穿著適當操作服裝?", "若進行較長距離之訓練， 是否以不超過 500 公尺為原則設定折返點?", "是否於起、終點及折返點 設置補水站或補水機制?", "是否安排適當休息機制?", "訓練後需再次評估同仁身體狀況"] },
-        scba: { title: "臺北市政府消防局空氣呼吸器訓練場安全檢核表", items: ["於訓練前是否有對學員進行危害告知?", "是否依照消防署或局頒教材內容安排進行上課。", "現場操作人員有無身體不適情形？現場醫療器材有無準備？", "是否選用適當操作場地(淨空並區分操作教學及待命空間)", "教官是否確實瞭解設備器材操作步驟及注意事項?", "操作前檢查所用設備器材外觀及功能是否正常?", "學員是否著適當個人防護裝備?", "進入侷限空間鐵籠區訓練時，所有人員皆需穿著消防鞋或救助鞋保護腳部安全", "入室前教官是否進行人員管制編組?(至少2人1組，同進同出)，學員依教官任務分工操作?", "入室前是否檢查空氣呼吸器壓力錶及殘壓警報器功能正常？(需氣量監控)", "是否擬定安全計畫(備援方案)？", "注意操作者身心狀況或其他安全顧慮，並建立輪替機制", "殘壓警報響起時，教官須徵詢學員繼續操作意願，接續操作或終止訓練。", "操作時教官發現學員有任何身體不適癥狀，得即時宣布暫停或中止訓練", "侷限空間鐵籠訓練路徑變換調整後，教官需落實安全夾放置及確定鐵網穩定後再行訓練"] },
+        scba: { title: "臺北市政府消防局訓練中心空氣呼吸器訓練場訓練安全檢核表", items: ["於訓練前是否有對學員進行危害告知?", "是否依照消防署或局頒教材內容安排進行上課。", "現場操作人員有無身體不適情形？現場醫療器材有無準備？", "是否選用適當操作場地(淨空並區分操作教學及待命空間)", "教官是否確實瞭解設備器材操作步驟及注意事項?", "操作前檢查所用設備器材外觀及功能是否正常?", "學員是否著適當個人防護裝備?", "進入侷限空間鐵籠區訓練時，所有人員皆需穿著消防鞋或救助鞋保護腳部安全", "入室前教官是否進行人員管制編組?(至少2人1組，同進同出)，學員依教官任務分工操作?", "入室前是否檢查空氣呼吸器壓力錶及殘壓警報器功能正常？(需氣量監控)", "是否擬定安全計畫(備援方案)？", "注意操作者身心狀況或其他安全顧慮，並建立輪替機制", "殘壓警報響起時，教官須徵詢學員繼續操作意願，接續操作或終止訓練。", "操作時教官發現學員有任何身體不適癥狀，得即時宣布暫停或中止訓練", "侷限空間鐵籠訓練路徑變換調整後，教官需落實安全夾放置及確定鐵網穩定後再行訓練"] },
         water: { title: "臺北市政府消防局水域訓練安全檢核表", items: ["於訓練前是否有對學員進行危害告知?", "是否依照消防署或局頒教材內容安排進行上課。", "是否已熟知署頒消防安全救災手冊內容之相關規定，並依規定要求進行操作？", "現場操作人員有無身體不適情形？現場醫療器材有無準備？", "評估天候與水情狀況(水流、深淺、水溫、渦流、暗礁)是否適合操作?", "是否已瞭解所使用救生裝備器具特性，並選用適合的裝備器材?", "是否依訓練項目穿戴完整水域救生裝備?", "課程前教官是否有示範？", "是否實施人員編組，並確實遵守教官之任務指示分工操作?", "是否排定上游監看人員及下游確保人員", "入水前是否已完成熱身運動", "是否有擬定安全計畫(備援方案)？", "使用後是否確實檢查救生器具狀況並確實清潔"] }
     };
 
@@ -183,6 +179,7 @@
     function updateItems() {
         const type = document.getElementById('courseType').value;
         const data = checklists[type];
+        document.getElementById('uiTitle').innerText = data.title;
         const list = document.getElementById('cardList');
         list.innerHTML = "";
         data.items.forEach((txt, i) => {
@@ -204,18 +201,15 @@
         if (n === 2 && !document.getElementById('trainName').value) return alert("請輸入訓練名稱");
         document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
         document.getElementById('step' + n).classList.add('active');
-        if (n === 3) {
-            setTimeout(initSignPads, 200);
-        }
+        if (n === 3) setTimeout(initSigs, 200);
         window.scrollTo(0,0);
     }
 
-    function initSignPads() {
+    function initSigs() {
         if (p1) return;
         const ratio = Math.max(window.devicePixelRatio || 1, 1);
         [document.getElementById('c1'), document.getElementById('c2')].forEach(c => {
-            c.width = c.offsetWidth * ratio;
-            c.height = c.offsetHeight * ratio;
+            c.width = c.offsetWidth * ratio; c.height = c.offsetHeight * ratio;
             c.getContext("2d").scale(ratio, ratio);
         });
         p1 = new SignaturePad(document.getElementById('c1'));
@@ -226,10 +220,11 @@
         const type = document.getElementById('courseType').value;
         const data = checklists[type];
         const timeVal = document.getElementById('trainTime').value;
+        const nameVal = document.getElementById('trainName').value;
         const [y, m, d] = timeVal.split('T')[0].split('-');
         
         document.getElementById('pdfTitle').innerText = data.title;
-        document.getElementById('pdfCourseName').innerText = document.getElementById('trainName').value;
+        document.getElementById('pdfCourseName').innerText = nameVal;
         document.getElementById('pdfTimeDisplay').innerText = `中華民國 ${y-1911} 年 ${m} 月 ${d} 日`;
         document.getElementById('pdfLocDisplay').innerText = "地點：" + document.getElementById('trainLoc').value;
         document.getElementById('pdfMemo').innerText = "備註：" + document.getElementById('memo').value;
@@ -247,7 +242,7 @@
     }
 
     async function showPreview() {
-        if (!p1 || p1.isEmpty() || p2.isEmpty()) return alert("簽名後才能預覽");
+        if (!p1 || p1.isEmpty() || p2.isEmpty()) return alert("簽名後才能預覽成品");
         document.getElementById('loader').style.display = 'flex';
         fillTemplate();
         const el = document.getElementById('pdfTemplate');
@@ -261,44 +256,45 @@
 
     async function finalSubmit() {
         const email = document.getElementById('targetEmail').value;
-        if (!email) return alert("請輸入 Email");
-        if (!p1 || p1.isEmpty() || p2.isEmpty()) return alert("請完成簽名");
-        
+        const trainName = document.getElementById('trainName').value;
+        const timeVal = document.getElementById('trainTime').value;
+        if (!email) return alert("請填寫 Email");
+        if (!p1 || p1.isEmpty() || p2.isEmpty()) return alert("請完成雙人簽名");
+        if (!confirm("確定歸檔？")) return;
+
         document.getElementById('loader').style.display = 'flex';
         fillTemplate();
+
+        const dateRaw = timeVal.split('T')[0].replace(/-/g, '');
+        const timeRaw = timeVal.split('T')[1].replace(/:/g, '');
+        const courseType = document.getElementById('courseType').value;
+        const fullFileName = `${dateRaw}_${timeRaw}_${courseType}_${trainName}.pdf`;
+
         const el = document.getElementById('pdfTemplate');
-        const canvas = await html2canvas(el, { scale: 2, backgroundColor: "#ffffff", height: el.offsetHeight });
+        const canvas = await html2canvas(el, { scale: 3, backgroundColor: "#ffffff", height: el.offsetHeight });
         const pdf = new jspdf.jsPDF('p', 'mm', [210, (canvas.height * 210) / canvas.width]);
-        pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 210, (canvas.height * 210) / canvas.width);
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 210, (canvas.height * 210) / canvas.width);
         
         const reader = new FileReader();
         reader.readAsDataURL(pdf.output('blob'));
         reader.onloadend = async () => {
             const base64 = reader.result.split(',')[1];
-            const timeVal = document.getElementById('trainTime').value;
-            const dateStr = timeVal.split('T')[0].replace(/-/g, '');
-            const timeStr = timeVal.split('T')[1].replace(/:/g, '');
             try {
                 const response = await fetch(GAS_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ 
-                        email: email, 
-                        fileData: base64, 
-                        fileName: `${dateStr}_${timeStr}_${document.getElementById('courseType').value}_${document.getElementById('trainName').value}.pdf`,
-                        dateStr: dateStr 
-                    })
+                    body: JSON.stringify({ email: email, fileData: base64, fileName: fullFileName, dateStr: dateRaw })
                 });
                 const res = await response.text();
                 if (res.includes("Success")) {
                     alert("✅ 歸檔成功！檔案已儲存。");
                     location.reload();
                 } else {
-                    alert("歸檔發生異常，請檢查資料夾。");
+                    alert("❌ 歸檔發生異常，請至雲端確認。");
                     location.reload();
                 }
             } catch(e) { 
-                alert("歸檔程序已發送，請至雲端確認。"); 
+                alert("歸檔程序已啟動，請至雲端確認。"); 
                 location.reload();
             }
         };
