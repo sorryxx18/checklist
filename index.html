@@ -474,7 +474,18 @@
             console.error("LIFF Init Error", e);
         }
 
-        loadState();
+        loadState(); // 1. 先讀取快取資料
+        
+        // --- 2. 插入：檢查網址是否有帶課程名稱參數 ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const courseFromUrl = urlParams.get('course');
+        if (courseFromUrl) {
+            // 如果網址有 ?course=xxx，就覆蓋掉原本的訓練名稱
+            document.getElementById('trainName').value = decodeURIComponent(courseFromUrl);
+            console.log("自動帶入課程名稱:", courseFromUrl);
+        }
+        // ------------------------------------------
+
         updateItems();
         setDefaultTime();
     }
