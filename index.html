@@ -459,6 +459,7 @@
    // === 初始化流程 (強效修正版：解決截圖中課程空白的問題) ===
     async function initApp() {
         try {
+            // 1. 初始化 LIFF
             await liff.init({ liffId: MY_LIFF_ID });
             isLiffInitialized = true;
             
@@ -466,6 +467,7 @@
                 liff.login();
             }
 
+            // 處理標題隱藏與高度
             if (liff.isInClient()) {
                 document.querySelector('.app-header').classList.add('hidden');
                 document.querySelector('.app-shell').style.borderRadius = '0';
@@ -477,34 +479,35 @@
             console.error("LIFF Init Error", e);
         }
 
-        // 1. 先執行原本的載入暫存
+        // 先載入其他欄位的暫存
         loadState(); 
         
-        // 2. 【強效抓取】不管 LINE 怎麼跳轉，直接從全網址中切出課程名稱
-        const fullUrl = window.location.href;
-        let courseValue = "";
+        // --- 終極抓取邏輯：抓取網址中的 course 參數 ---
+        const getUrlParam = (name) => {
+            // 同時檢查 window.location 的 search 和 hash
+            const queryString = window.location.search || window.location.hash.substring(window.location.hash.indexOf('?'));
+            const params = new URLSearchParams(queryString);
+            return params.get(name);
+        };
 
-        if (fullUrl.includes("course=")) {
-            // 從網址中切出 course= 之後的文字
-            const temp = fullUrl.split("course=")[1];
-            // 排除掉可能存在的其他參數（如 & 或 #）
-            courseValue = temp.split("&")[0].split("#")[0];
-            courseValue = decodeURIComponent(courseValue);
-        }
+        const courseValue = getUrlParam('course');
 
-        // 3. 只要網址有帶課程，就強制覆蓋「訓練名稱」欄位
-        if (courseValue && courseValue !== "") {
-            const trainField = document.getElementById('trainName');
-            if (trainField) {
-                trainField.value = courseValue;
-                console.log("成功強制帶入課程名稱:", courseValue);
-            }
+        if (courseValue) {
+            // 強制延遲 100 毫秒執行，確保 DOM 已經完全就緒
+            setTimeout(() => {
+                const trainField = document.getElementById('trainName');
+                if (trainField) {
+                    trainField.value = decodeURIComponent(courseValue);
+                    // 關鍵：填完後立刻存檔一次，防止被 saveState 刷掉
+                    saveState(); 
+                    console.log("已帶入課程名稱:", courseValue);
+                }
+            }, 100);
         }
 
         updateItems();
         setDefaultTime();
     }
-
     // === 暫存功能 ===
     function saveState() {
         if (!isLiffInitialized && !window.localStorage) return;
