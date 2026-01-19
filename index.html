@@ -456,13 +456,12 @@
     let p1, p2;
     let isLiffInitialized = false;
 
-   // === 初始化流程 (強效版：解決參數遺失問題) ===
+   // === 初始化流程 (強效修正版：解決截圖中課程空白的問題) ===
     async function initApp() {
         try {
             await liff.init({ liffId: MY_LIFF_ID });
             isLiffInitialized = true;
             
-            // 登入處理
             if (!liff.isLoggedIn()) {
                 liff.login();
             }
@@ -478,23 +477,29 @@
             console.error("LIFF Init Error", e);
         }
 
-        loadState(); // 先讀取暫存資料
+        // 1. 先執行原本的載入暫存
+        loadState(); 
+        
+        // 2. 【強效抓取】不管 LINE 怎麼跳轉，直接從全網址中切出課程名稱
+        const fullUrl = window.location.href;
+        let courseValue = "";
 
-        // --- 核心：強效抓取 URL 參數 ---
-        // 同時檢查標準 URL 參數 (?course=) 和 LINE 跳轉後的 Hash 參數 (#/?course=)
-        let search = window.location.search;
-        if (!search && window.location.hash.includes('?')) {
-            search = window.location.hash.substring(window.location.hash.indexOf('?'));
+        if (fullUrl.includes("course=")) {
+            // 從網址中切出 course= 之後的文字
+            const temp = fullUrl.split("course=")[1];
+            // 排除掉可能存在的其他參數（如 & 或 #）
+            courseValue = temp.split("&")[0].split("#")[0];
+            courseValue = decodeURIComponent(courseValue);
         }
-        const urlParams = new URLSearchParams(search);
-        const courseFromUrl = urlParams.get('course');
 
-        if (courseFromUrl) {
-            // 自動填入訓練名稱
-            document.getElementById('trainName').value = decodeURIComponent(courseFromUrl);
-            console.log("成功自動帶入課程:", courseFromUrl);
+        // 3. 只要網址有帶課程，就強制覆蓋「訓練名稱」欄位
+        if (courseValue && courseValue !== "") {
+            const trainField = document.getElementById('trainName');
+            if (trainField) {
+                trainField.value = courseValue;
+                console.log("成功強制帶入課程名稱:", courseValue);
+            }
         }
-        // ------------------------------
 
         updateItems();
         setDefaultTime();
