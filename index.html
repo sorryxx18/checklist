@@ -456,9 +456,10 @@
     let p1, p2;
     let isLiffInitialized = false;
 
-   // === 初始化流程 (修正邏輯衝突與參數抓取) ===
+// === 初始化流程 (獨裁者版：強制覆蓋所有暫存) ===
     async function initApp() {
         try {
+            // 1. 初始化 LIFF
             await liff.init({ liffId: MY_LIFF_ID });
             isLiffInitialized = true;
             
@@ -466,6 +467,7 @@
                 liff.login();
             }
 
+            // 處理標題隱藏與高度
             if (liff.isInClient()) {
                 document.querySelector('.app-header').classList.add('hidden');
                 document.querySelector('.app-shell').style.borderRadius = '0';
@@ -477,32 +479,45 @@
             console.error("LIFF Init Error", e);
         }
 
-        // 1. 先讀取快取 (這會填入舊的、可能是空的課程名稱)
-        loadState(); 
+        // --- 核心邏輯開始 ---
         
-        // 2. 強力抓取 URL 參數 (同時檢查 ? 和 # 後面的參數)
-        const getUrlParam = (name) => {
-            const url = window.location.href;
-            const results = new RegExp('[\\?&]' + name + '=([^&#]*)').exec(url);
-            return results ? decodeURIComponent(results[1]) : null;
-        };
-
-        const courseFromUrl = getUrlParam('course');
-
-        // 3. 如果網址有課程名稱，強制覆蓋欄位
-        if (courseFromUrl && courseFromUrl.trim() !== "") {
-            const trainField = document.getElementById('trainName');
-            if (trainField) {
-                trainField.value = courseFromUrl;
-                console.log("成功帶入課程:", courseFromUrl);
-            }
-        }
-
-        // 4. 最後才執行 UI 更新 (updateItems 內部會呼叫 saveState，此時 trainName 已經有值了)
+        // 1. 先執行原本的載入與更新 (這可能會帶入空的舊資料)
+        loadState(); 
         updateItems();
         setDefaultTime();
+
+        // 2. 【暴力抓取網址課程】
+        // 同時抓取兩種可能的網址格式
+        const getCourse = () => {
+            const fullUrl = window.location.href;
+            console.log("當前網址為: " + fullUrl); // 除錯用
+            
+            // 嘗試從 ?course= 抓
+            let match = fullUrl.match(/[?&]course=([^&#]*)/);
+            if (match) return decodeURIComponent(match[1]);
+            
+            // 嘗試從 # 號後面的參數抓 (LINE 常見跳轉錯誤)
+            let hashMatch = fullUrl.match(/#.*[?&]course=([^&#]*)/);
+            if (hashMatch) return decodeURIComponent(hashMatch[1]);
+            
+            return null;
+        };
+
+        const finalCourse = getCourse();
+
+        // 3. 【獨裁執行】如果有抓到課程，強制覆蓋並立刻存入手機緩存
+        if (finalCourse && finalCourse.trim() !== "") {
+            const trainField = document.getElementById('trainName');
+            if (trainField) {
+                // 這裡是關鍵：強制填入
+                trainField.value = finalCourse; 
+                // 這裡是關鍵：填完立刻叫 saveState() 把這個正確的值鎖死在緩存裡
+                saveState(); 
+                console.log("獨裁者模式：已強制帶入課程名稱 -> " + finalCourse);
+            }
+        }
     }
-    }
+    
     // === 暫存功能 ===
     function saveState() {
         if (!isLiffInitialized && !window.localStorage) return;
