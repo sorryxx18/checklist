@@ -456,17 +456,21 @@
     let p1, p2;
     let isLiffInitialized = false;
 
-    // === 初始化流程 ===
+   // === 初始化流程 (強效版：解決參數遺失問題) ===
     async function initApp() {
         try {
             await liff.init({ liffId: MY_LIFF_ID });
             isLiffInitialized = true;
             
+            // 登入處理
+            if (!liff.isLoggedIn()) {
+                liff.login();
+            }
+
             if (liff.isInClient()) {
                 document.querySelector('.app-header').classList.add('hidden');
                 document.querySelector('.app-shell').style.borderRadius = '0';
                 document.querySelector('.app-shell').style.height = '100%';
-                
                 const viewportHeight = liff.getViewportHeight();
                 document.documentElement.style.setProperty('--app-height', `${viewportHeight}px`);
             }
@@ -474,17 +478,23 @@
             console.error("LIFF Init Error", e);
         }
 
-        loadState(); // 1. 先讀取快取資料
-        
-        // --- 2. 插入：檢查網址是否有帶課程名稱參數 ---
-        const urlParams = new URLSearchParams(window.location.search);
-        const courseFromUrl = urlParams.get('course');
-        if (courseFromUrl) {
-            // 如果網址有 ?course=xxx，就覆蓋掉原本的訓練名稱
-            document.getElementById('trainName').value = decodeURIComponent(courseFromUrl);
-            console.log("自動帶入課程名稱:", courseFromUrl);
+        loadState(); // 先讀取暫存資料
+
+        // --- 核心：強效抓取 URL 參數 ---
+        // 同時檢查標準 URL 參數 (?course=) 和 LINE 跳轉後的 Hash 參數 (#/?course=)
+        let search = window.location.search;
+        if (!search && window.location.hash.includes('?')) {
+            search = window.location.hash.substring(window.location.hash.indexOf('?'));
         }
-        // ------------------------------------------
+        const urlParams = new URLSearchParams(search);
+        const courseFromUrl = urlParams.get('course');
+
+        if (courseFromUrl) {
+            // 自動填入訓練名稱
+            document.getElementById('trainName').value = decodeURIComponent(courseFromUrl);
+            console.log("成功自動帶入課程:", courseFromUrl);
+        }
+        // ------------------------------
 
         updateItems();
         setDefaultTime();
