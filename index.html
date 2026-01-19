@@ -437,7 +437,7 @@
     const MY_LIFF_ID = "2008646412-AE6RG7wN"; 
     
     // ⚠️ 請替換為您的 GAS URL
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbz8dtX-jwgSiJPuAhSO6_7reiKOeTcXUdHXM-5l0Lf5mCyTZ24efdWXxQn__ygjB1yKCg/exec"; 
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyIWAPAI6ZvBsGATdbRRZboWmtmO289BAQWJe-nl9sllYjtS3LH4VXPjCwDXxtEwxQnkQ/exec"; 
 
     // === 題庫資料 ===
     const checklists = {
@@ -456,66 +456,38 @@
     let p1, p2;
     let isLiffInitialized = false;
 
-// === 初始化流程 (獨裁者版：強制覆蓋所有暫存) ===
-    async function initApp() {
+async function initApp() {
         try {
-            // 1. 初始化 LIFF
             await liff.init({ liffId: MY_LIFF_ID });
             isLiffInitialized = true;
-            
-            if (!liff.isLoggedIn()) {
-                liff.login();
-            }
+            if (!liff.isLoggedIn()) { liff.login(); }
 
-            // 處理標題隱藏與高度
             if (liff.isInClient()) {
                 document.querySelector('.app-header').classList.add('hidden');
                 document.querySelector('.app-shell').style.borderRadius = '0';
                 document.querySelector('.app-shell').style.height = '100%';
-                const viewportHeight = liff.getViewportHeight();
-                document.documentElement.style.setProperty('--app-height', `${viewportHeight}px`);
             }
-        } catch (e) {
-            console.error("LIFF Init Error", e);
+        } catch (e) { console.error("LIFF Init Error", e); }
+
+        loadState(); // 載入舊暫存
+
+        // --- 核心：全網址暴力掃描 course 參數 ---
+        const fullUrl = window.location.href;
+        const match = fullUrl.match(/[?&]course=([^&#]*)/);
+        if (match) {
+            const courseValue = decodeURIComponent(match[1]);
+            // 強制延遲確保 DOM 就緒後填入並鎖定
+            setTimeout(() => {
+                const trainField = document.getElementById('trainName');
+                if (trainField) {
+                    trainField.value = courseValue;
+                    saveState(); // 填完立刻存檔防止被洗掉
+                }
+            }, 200);
         }
 
-        // --- 核心邏輯開始 ---
-        
-        // 1. 先執行原本的載入與更新 (這可能會帶入空的舊資料)
-        loadState(); 
         updateItems();
         setDefaultTime();
-
-        // 2. 【暴力抓取網址課程】
-        // 同時抓取兩種可能的網址格式
-        const getCourse = () => {
-            const fullUrl = window.location.href;
-            console.log("當前網址為: " + fullUrl); // 除錯用
-            
-            // 嘗試從 ?course= 抓
-            let match = fullUrl.match(/[?&]course=([^&#]*)/);
-            if (match) return decodeURIComponent(match[1]);
-            
-            // 嘗試從 # 號後面的參數抓 (LINE 常見跳轉錯誤)
-            let hashMatch = fullUrl.match(/#.*[?&]course=([^&#]*)/);
-            if (hashMatch) return decodeURIComponent(hashMatch[1]);
-            
-            return null;
-        };
-
-        const finalCourse = getCourse();
-
-        // 3. 【獨裁執行】如果有抓到課程，強制覆蓋並立刻存入手機緩存
-        if (finalCourse && finalCourse.trim() !== "") {
-            const trainField = document.getElementById('trainName');
-            if (trainField) {
-                // 這裡是關鍵：強制填入
-                trainField.value = finalCourse; 
-                // 這裡是關鍵：填完立刻叫 saveState() 把這個正確的值鎖死在緩存裡
-                saveState(); 
-                console.log("獨裁者模式：已強制帶入課程名稱 -> " + finalCourse);
-            }
-        }
     }
     
     // === 暫存功能 ===
