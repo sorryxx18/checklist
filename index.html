@@ -456,10 +456,9 @@
     let p1, p2;
     let isLiffInitialized = false;
 
-   // === 初始化流程 (強效修正版：解決截圖中課程空白的問題) ===
+   // === 初始化流程 (修正邏輯衝突與參數抓取) ===
     async function initApp() {
         try {
-            // 1. 初始化 LIFF
             await liff.init({ liffId: MY_LIFF_ID });
             isLiffInitialized = true;
             
@@ -467,7 +466,6 @@
                 liff.login();
             }
 
-            // 處理標題隱藏與高度
             if (liff.isInClient()) {
                 document.querySelector('.app-header').classList.add('hidden');
                 document.querySelector('.app-shell').style.borderRadius = '0';
@@ -479,34 +477,31 @@
             console.error("LIFF Init Error", e);
         }
 
-        // 先載入其他欄位的暫存
+        // 1. 先讀取快取 (這會填入舊的、可能是空的課程名稱)
         loadState(); 
         
-        // --- 終極抓取邏輯：抓取網址中的 course 參數 ---
+        // 2. 強力抓取 URL 參數 (同時檢查 ? 和 # 後面的參數)
         const getUrlParam = (name) => {
-            // 同時檢查 window.location 的 search 和 hash
-            const queryString = window.location.search || window.location.hash.substring(window.location.hash.indexOf('?'));
-            const params = new URLSearchParams(queryString);
-            return params.get(name);
+            const url = window.location.href;
+            const results = new RegExp('[\\?&]' + name + '=([^&#]*)').exec(url);
+            return results ? decodeURIComponent(results[1]) : null;
         };
 
-        const courseValue = getUrlParam('course');
+        const courseFromUrl = getUrlParam('course');
 
-        if (courseValue) {
-            // 強制延遲 100 毫秒執行，確保 DOM 已經完全就緒
-            setTimeout(() => {
-                const trainField = document.getElementById('trainName');
-                if (trainField) {
-                    trainField.value = decodeURIComponent(courseValue);
-                    // 關鍵：填完後立刻存檔一次，防止被 saveState 刷掉
-                    saveState(); 
-                    console.log("已帶入課程名稱:", courseValue);
-                }
-            }, 100);
+        // 3. 如果網址有課程名稱，強制覆蓋欄位
+        if (courseFromUrl && courseFromUrl.trim() !== "") {
+            const trainField = document.getElementById('trainName');
+            if (trainField) {
+                trainField.value = courseFromUrl;
+                console.log("成功帶入課程:", courseFromUrl);
+            }
         }
 
+        // 4. 最後才執行 UI 更新 (updateItems 內部會呼叫 saveState，此時 trainName 已經有值了)
         updateItems();
         setDefaultTime();
+    }
     }
     // === 暫存功能 ===
     function saveState() {
